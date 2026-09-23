@@ -2,7 +2,6 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import Faq, { type FaqItem } from '../components/Faq.astro';
 import { SITE, BUSINESS, LITERS } from '../consts';
 
 // Statisch, zodat Netlify Forms het formulier bij de deploy herkent.
@@ -10,37 +9,8 @@ import { SITE, BUSINESS, LITERS } from '../consts';
 // e-mailmelding naar het adres van de zaak.
 const FORM_NAME = 'liters-ijs';
 
-const faq: FaqItem[] = [
-  {
-    question: 'Hoe lang op voorhand bestel je liters ijs bij Verano Ice Bar?',
-    answer: `Bestel liters ijs bij Verano Ice Bar minstens ${LITERS.leadDays} dagen voor je het wil afhalen. Zo kunnen we je smaken vers draaien. Heb je het sneller nodig, bel dan even naar ${BUSINESS.phone}.`,
-  },
-  {
-    question: 'Welke smaken kan je per liter bestellen?',
-    answer:
-      'Per liter bestel je in principe elke smaak die Verano Ice Bar maakt, zowel roomijs als sorbet. Noteer je voorkeur in het formulier; is een smaak niet mogelijk, dan stellen we een alternatief voor.',
-  },
-  {
-    question: 'Is mijn bestelling meteen bevestigd?',
-    answer:
-      'Nee, een aanvraag via het formulier is nog geen bevestigde bestelling. Verano Ice Bar neemt contact met je op om de smaken, de prijs en het afhaalmoment te bevestigen.',
-  },
-  {
-    question: 'Hoe bewaar je ijs per liter thuis?',
-    answer:
-      'Bewaar ijs per liter meteen in de diepvries op min 18 graden. Haal het vijf tot tien minuten voor het scheppen uit de diepvries, dan schept het makkelijker.',
-  },
-];
 
 const schema = [
-  {
-    '@type': 'FAQPage',
-    mainEntity: faq.map((item) => ({
-      '@type': 'Question',
-      name: item.question,
-      acceptedAnswer: { '@type': 'Answer', text: item.answer },
-    })),
-  },
   {
     '@type': 'BreadcrumbList',
     itemListElement: [
@@ -90,7 +60,7 @@ const labelClass = 'block font-bold text-ink-900';
           <ol class="mt-5 space-y-4 text-ink-800">
             <li>
               <strong class="text-ink-900">1. Vul het formulier in.</strong> Kies het formaat, het aantal en de smaken, en wanneer je
-              het ijs wil afhalen.
+              het ijs wil afhalen. Bestel minstens {LITERS.leadDays} dagen op voorhand, zo kunnen we je smaken vers draaien.
             </li>
             <li>
               <strong class="text-ink-900">2. Wij bevestigen.</strong> We bellen of mailen je terug met de prijs en het afhaalmoment.
@@ -186,7 +156,6 @@ const labelClass = 'block font-bold text-ink-900';
       </div>
     </section>
 
-    <Faq items={faq} />
   </main>
   <Footer />
 </Layout>

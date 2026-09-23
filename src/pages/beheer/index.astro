@@ -2,6 +2,7 @@
 // Beheerpagina voor de uitbaters: smaken van vandaag en openingsuren.
 // Niet gelinkt vanaf de site en niet geïndexeerd; enkel bereikbaar via de URL
 // en na aanmelden met de vaste login uit de omgevingsvariabelen.
+// Gemaakt voor de gsm achter de toonbank: elk blok heeft een eigen opslagknop.
 import '../../styles/global.css';
 import { Font, Image } from 'astro:assets';
 import logo from '../../assets/logo.svg';
@@ -11,8 +12,10 @@ import {
   FormError,
   parseAvailability,
   parseException,
-  parseHours,
   parseNewFlavour,
+  parseNotice,
+  parseSeason,
+  parseWeek,
   pruneExceptions,
   removeException,
   removeFlavour,
@@ -20,25 +23,32 @@ import {
 } from '../../lib/admin';
 import { checkCredentials, loginConfigProblem, SESSION_KEY } from '../../lib/auth';
 import { purgeLivePages } from '../../lib/cache';
+import Feedback from '../../components/beheer/Feedback.astro';
 
 export const prerender = false;
 
 Astro.response.headers.set('Cache-Control', 'private, no-store');
 Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
 
-const MESSAGES: Record<string, string> = {
-  smaken: 'Smakenlijst opgeslagen. De website is bijgewerkt.',
-  'smaak-toegevoegd': 'Smaak toegevoegd en meteen aangevinkt.',
-  'smaak-verwijderd': 'Smaak verwijderd.',
-  uren: 'Openingsuren opgeslagen. De website is bijgewerkt.',
-  uitzondering: 'Uitzondering opgeslagen.',
-  'uitzondering-verwijderd': 'Uitzondering verwijderd.',
+// Elk blok op de pagina heeft een eigen formulier. Het id is ook het anker
+// waar je na het opslaan terechtkomt, en de plek waar de melding verschijnt.
+type Block = 'smaken' | 'smaak-nieuw' | 'weekschema' | 'uitzonderingen' | 'seizoen' | 'mededeling';
+
+const RESULTS: Record<string, { block: Block; text: string }> = {
+  smaken: { block: 'smaken', text: 'Opgeslagen. De website toont nu deze smaken.' },
+  'smaak-verwijderd': { block: 'smaken', text: 'Smaak verwijderd.' },
+  'smaak-nieuw': { block: 'smaak-nieuw', text: 'Toegevoegd en aangevinkt in de lijst hierboven.' },
+  weekschema: { block: 'weekschema', text: 'Openingsuren opgeslagen.' },
+  uitzondering: { block: 'uitzonderingen', text: 'Uitzondering opgeslagen.' },
+  'uitzondering-verwijderd': { block: 'uitzonderingen', text: 'Uitzondering verwijderd.' },
+  seizoen: { block: 'seizoen', text: 'Seizoen opgeslagen.' },
+  mededeling: { block: 'mededeling', text: 'Mededeling opgeslagen.' },
 };
 
 const loggedIn = (await Astro.session?.get(SESSION_KEY)) === true;
-let error: string | null = null;
-let loginError: string | null = null;
 const configProblem = loginConfigProblem();
+let loginError: string | null = null;
+let error: { block: Block; text: string } | null = null;
 
 if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
@@ -67,45 +77,64 @@ if (Astro.request.method === 'POST') {
     Astro.session?.destroy();
     return Astro.redirect('/beheer', 303);
   } else {
+    const [action, arg = ''] = intent.split(':');
+    let result: string;
+    let block: Block = 'smaken';
     try {
-      let done: string;
-      if (intent === 'smaken-opslaan' || intent.startsWith('smaak-verwijderen:')) {
-        // Ook bij verwijderen eerst de vinkjes bewaren, anders gaan niet-opgeslagen wijzigingen verloren.
-        let data = parseAvailability(form, await getFlavours());
-        if (intent === 'smaken-opslaan') {
-          done = 'smaken';
-        } else {
-          data = removeFlavour(intent.slice('smaak-verwijderen:'.length), data);
-          done = 'smaak-verwijderd';
+      switch (action) {
+        case 'smaken-opslaan':
+        case 'smaak-verwijderen': {
+          // Ook bij verwijderen eerst de vinkjes bewaren, anders gaan niet-opgeslagen wijzigingen verloren.
+          let data = parseAvailability(form, await getFlavours());
+          if (action === 'smaak-verwijderen') data = removeFlavour(arg, data);
+          await saveFlavours(data);
+          result = action === 'smaken-opslaan' ? 'smaken' : 'smaak-verwijderd';
+          break;
         }
-        await saveFlavours(data);
-      } else if (intent === 'smaak-toevoegen') {
-        await saveFlavours(parseNewFlavour(form, await getFlavours()));
-        done = 'smaak-toegevoegd';
-      } else if (intent === 'uren-opslaan') {
-        await saveHours(parseHours(form, await getHours()));
-        done = 'uren';
-      } else if (intent === 'uitzondering-toevoegen') {
-        await saveHours(parseException(form, await getHours()));
-        done = 'uitzondering';
-      } else if (intent.startsWith('uitzondering-verwijderen:')) {
-        await saveHours(removeException(intent.slice('uitzondering-verwijderen:'.length), await getHours()));
-        done = 'uitzondering-verwijderd';
-      } else {
-        throw new FormError('Onbekende actie.');
+        case 'smaak-toevoegen':
+          block = 'smaak-nieuw';
+          await saveFlavours(parseNewFlavour(form, await getFlavours()));
+          result = 'smaak-nieuw';
+          break;
+        case 'weekschema':
+          block = 'weekschema';
+          await saveHours(parseWeek(form, await getHours()));
+          result = 'weekschema';
+          break;
+        case 'uitzondering-toevoegen':
+          block = 'uitzonderingen';
+          await saveHours(parseException(form, await getHours()));
+          result = 'uitzondering';
+          break;
+        case 'uitzondering-verwijderen':
+          block = 'uitzonderingen';
+          await saveHours(removeException(arg, await getHours()));
+          result = 'uitzondering-verwijderd';
+          break;
+        case 'seizoen':
+          block = 'seizoen';
+          await saveHours(parseSeason(form, await getHours()));
+          result = 'seizoen';
+          break;
+        case 'mededeling':
+          block = 'mededeling';
+          await saveHours(parseNotice(form, await getHours()));
+          result = 'mededeling';
+          break;
+        default:
+          throw new FormError('Onbekende actie.');
       }
       await purgeLivePages();
-      const anchor = done.startsWith('uitzondering') ? 'uitzonderingen' : done === 'uren' ? 'uren' : 'smaken';
-      return Astro.redirect(`/beheer?ok=${done}#${anchor}`, 303);
+      return Astro.redirect(`/beheer?ok=${result}#${RESULTS[result].block}`, 303);
     } catch (e) {
       if (!(e instanceof FormError)) throw e;
-      error = e.message;
+      error = { block, text: e.message };
       Astro.response.status = 422;
     }
   }
 }
 
-const okMessage = MESSAGES[Astro.url.searchParams.get('ok') ?? ''] ?? null;
+const done = RESULTS[Astro.url.searchParams.get('ok') ?? ''] ?? null;
 const [hours, flavourData] = loggedIn ? await Promise.all([getHours(), getFlavours()]) : [null, null];
 const exceptions = hours ? pruneExceptions(hours.exceptions) : [];
 const groups = flavourData
@@ -116,20 +145,30 @@ const groups = flavourData
   : [];
 const availableCount = flavourData?.flavours.filter((f) => f.available).length ?? 0;
 
+/** Melding (opgeslagen of fout) voor één blok. */
+const feedback = (block: Block) =>
+  error?.block === block ? { ok: false, text: error.text } : done?.block === block ? { ok: true, text: done.text } : null;
+
 const input =
-  'block w-full rounded-xl border-2 border-sun-200 bg-white px-3 py-2.5 text-base text-ink-900 focus:border-ink-800 focus:outline-none';
-const card = 'rounded-3xl bg-white p-5 shadow-sm sm:p-7';
-const primary = 'rounded-full bg-ink-900 px-6 py-3 font-bold text-sun-100 hover:bg-ink-700';
+  'block min-h-12 w-full min-w-0 rounded-xl border-2 border-sun-200 bg-white px-3 py-2 text-base text-ink-900 focus:border-ink-800 focus:outline-none';
+const card = 'scroll-mt-32 rounded-3xl bg-white p-4 shadow-sm sm:p-6';
+const h2 = 'text-2xl font-semibold text-ink-900';
+const help = 'mt-1 text-[15px] leading-snug text-ink-700';
+const primary =
+  'min-h-12 w-full rounded-full bg-ink-900 px-6 py-3 text-base font-bold text-sun-100 hover:bg-ink-700 sm:w-auto';
+// Opslagbalk die onderaan in beeld blijft zolang je in dat blok bezig bent.
+const saveBar =
+  'sticky bottom-0 z-10 -mx-4 -mb-4 mt-5 flex flex-col gap-2 rounded-b-3xl border-t border-sun-100 bg-white/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur sm:-mx-6 sm:-mb-6 sm:flex-row sm:items-center sm:justify-between sm:px-6';
 ---
 
 <!doctype html>
 <html lang="nl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="robots" content="noindex, nofollow" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="theme-color" content="#f6dd66" />
+    <meta name="theme-color" content="#fffbea" />
     <title>Beheer | Verano Ice Bar</title>
     <Font cssVariable="--font-fredoka" />
     <Font cssVariable="--font-nunito" />
@@ -140,12 +179,13 @@ const primary = 'rounded-full bg-ink-900 px-6 py-3 font-bold text-sun-100 hover:
         <main class="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4 py-10">
           <Image src={logo} alt="Verano Ice Bar" width={112} height={112} class="mx-auto h-28 w-28" />
           <h1 class="mt-4 text-center text-3xl font-semibold text-ink-900">Beheer</h1>
-          <form method="POST" class={`${card} mt-6 space-y-4`}>
+          <form method="POST" class="mt-6 space-y-4 rounded-3xl bg-white p-5 shadow-sm">
             <input type="hidden" name="intent" value="login" />
-            {configProblem && !loginError && (
-              <p class="rounded-xl bg-berry-100 px-4 py-3 font-semibold text-berry-700" role="alert">{configProblem}</p>
+            {(loginError ?? configProblem) && (
+              <p class="rounded-xl bg-berry-100 px-4 py-3 font-semibold text-berry-700" role="alert">
+                {loginError ?? configProblem}
+              </p>
             )}
-            {loginError && <p class="rounded-xl bg-berry-100 px-4 py-3 font-semibold text-berry-700" role="alert">{loginError}</p>}
             <div>
               <label for="gebruiker" class="font-bold text-ink-900">Gebruikersnaam</label>
               <input id="gebruiker" name="gebruiker" required autocomplete="username" autocapitalize="none" class={`${input} mt-1`} />
@@ -154,271 +194,251 @@ const primary = 'rounded-full bg-ink-900 px-6 py-3 font-bold text-sun-100 hover:
               <label for="wachtwoord" class="font-bold text-ink-900">Wachtwoord</label>
               <input id="wachtwoord" name="wachtwoord" type="password" required autocomplete="current-password" class={`${input} mt-1`} />
             </div>
-            <button type="submit" class={`${primary} w-full`}>Aanmelden</button>
+            <button type="submit" class={`${primary} sm:w-full`}>Aanmelden</button>
           </form>
         </main>
       ) : (
         <>
           <header class="sticky top-0 z-30 border-b border-sun-200 bg-sun-50/95 backdrop-blur">
-            <div class="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-2">
+            <div class="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 pt-2">
               <div class="flex items-center gap-2">
-                <Image src={logo} alt="" width={40} height={40} class="h-10 w-10" />
+                <Image src={logo} alt="" width={36} height={36} class="h-9 w-9" />
                 <span class="font-display text-lg font-semibold text-ink-900">Beheer</span>
               </div>
-              <nav class="flex items-center gap-1 text-sm font-bold" aria-label="Beheer">
-                <a href="#smaken" class="rounded-full px-3 py-2 hover:bg-sun-100">Smaken</a>
-                <a href="#uren" class="rounded-full px-3 py-2 hover:bg-sun-100">Uren</a>
-                <a href="#uitzonderingen" class="rounded-full px-3 py-2 hover:bg-sun-100">Uitzonderingen</a>
-              </nav>
+              <a href="/" target="_blank" class="rounded-full px-3 py-2 text-sm font-bold text-berry-700 underline">
+                Bekijk website
+              </a>
             </div>
+            <nav class="mx-auto grid max-w-2xl grid-cols-3 gap-1 px-4 pb-2 pt-1 text-sm font-bold" aria-label="Onderdelen">
+              <a href="#smaken" class="rounded-full bg-white py-2.5 text-center shadow-sm hover:bg-sun-100">Smaken</a>
+              <a href="#weekschema" class="rounded-full bg-white py-2.5 text-center shadow-sm hover:bg-sun-100">Uren</a>
+              <a href="#mededeling" class="rounded-full bg-white py-2.5 text-center shadow-sm hover:bg-sun-100">Mededeling</a>
+            </nav>
           </header>
 
-          <main class="mx-auto max-w-3xl space-y-8 px-4 pb-32 pt-6">
-            {okMessage && (
-              <p class="rounded-2xl bg-mint-100 px-5 py-3 font-bold text-mint-600" role="status">
-                {okMessage}
-              </p>
-            )}
-            {error && (
-              <p class="rounded-2xl bg-berry-100 px-5 py-3 font-bold text-berry-700" role="alert">
-                {error}
-              </p>
-            )}
-
+          <main class="mx-auto max-w-2xl space-y-5 px-3 pb-16 pt-4 sm:px-4">
             {/* ---------------- Smaken ---------------- */}
-            <section id="smaken" class="scroll-mt-20">
-              <form method="POST" id="smaken-form" class={card}>
-                {/* Eerste submitknop = wat Enter in een tekstveld doet. Zonder deze zou dat de eerste "Verwijder" zijn. */}
-                <button type="submit" name="intent" value="smaken-opslaan" tabindex="-1" aria-hidden="true" class="absolute -left-[9999px]">
-                  Opslaan
+            <form method="POST" id="smaken" class={card} data-smaken>
+              {/* Eerste submitknop = wat Enter in een tekstveld doet. Zonder deze zou dat een "Verwijder" zijn. */}
+              <button type="submit" name="intent" value="smaken-opslaan" tabindex="-1" aria-hidden="true" class="absolute -left-[9999px]">
+                Opslaan
+              </button>
+              <div class="flex items-baseline justify-between gap-2">
+                <h2 class={h2}>Smaken van vandaag</h2>
+                <span class="shrink-0 rounded-full bg-mint-100 px-3 py-1 text-sm font-bold text-mint-600">
+                  <span data-teller>{availableCount}</span> online
+                </span>
+              </div>
+              <p class={help}>Tik aan wat in de toonbank ligt. Enkel aangevinkte smaken komen op de website.</p>
+
+              <div class="mt-3 grid grid-cols-3 gap-2 text-sm font-bold">
+                <button type="button" data-alles="aan" class="min-h-11 rounded-full border-2 border-ink-800/15 hover:bg-sun-100">Alles aan</button>
+                <button type="button" data-alles="uit" class="min-h-11 rounded-full border-2 border-ink-800/15 hover:bg-sun-100">Alles uit</button>
+                <button type="button" data-bewerk aria-pressed="false" class="min-h-11 rounded-full border-2 border-ink-800/15 hover:bg-sun-100 aria-pressed:border-berry-600 aria-pressed:text-berry-700">
+                  Verwijderen
                 </button>
-                <div class="flex flex-wrap items-baseline justify-between gap-2">
-                  <h2 class="text-2xl font-semibold text-ink-900">Smaken van vandaag</h2>
-                  <p class="text-sm font-semibold">
-                    <span id="smaken-teller">{availableCount}</span> aangevinkt
-                  </p>
-                </div>
-                <p class="mt-1 text-sm">Vink aan wat nu in de toonbank ligt en druk op opslaan. Enkel aangevinkte smaken komen online.</p>
+              </div>
 
-                <div class="mt-4 flex flex-wrap gap-2">
-                  <button type="button" data-alles="aan" class="rounded-full border-2 border-ink-800/20 px-4 py-1.5 text-sm font-bold hover:bg-sun-100">
-                    Alles aanvinken
-                  </button>
-                  <button type="button" data-alles="uit" class="rounded-full border-2 border-ink-800/20 px-4 py-1.5 text-sm font-bold hover:bg-sun-100">
-                    Alles uitvinken
-                  </button>
-                </div>
+              {groups.map((group) => (
+                <fieldset class="mt-5">
+                  <legend class="font-display text-lg font-semibold text-ink-900">{group.title}</legend>
+                  {group.items.length === 0 && <p class="mt-1 text-sm">Nog geen smaken in deze groep.</p>}
+                  <ul class="mt-2 space-y-1.5">
+                    {group.items.map((f) => (
+                      <li class="flex items-center gap-2">
+                        <label class="flex min-h-14 flex-1 cursor-pointer items-center gap-3 rounded-2xl border-2 border-sun-100 px-3 has-checked:border-mint-600/40 has-checked:bg-mint-100">
+                          <input type="checkbox" name="beschikbaar" value={f.id} checked={f.available} class="h-7 w-7 shrink-0 accent-mint-600" />
+                          <span class="min-w-0 flex-1 text-lg font-semibold leading-tight text-ink-900">{f.name}</span>
+                          {f.vegan && <span class="text-xs font-extrabold uppercase text-mint-600">vegan</span>}
+                        </label>
+                        <button
+                          type="submit"
+                          name="intent"
+                          value={`smaak-verwijderen:${f.id}`}
+                          formnovalidate
+                          data-bevestig={`"${f.name}" definitief uit de lijst verwijderen?`}
+                          data-verwijder
+                          hidden
+                          class="min-h-14 shrink-0 rounded-2xl bg-berry-100 px-3 text-sm font-bold text-berry-700"
+                          aria-label={`${f.name} verwijderen`}
+                        >
+                          Verwijder
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </fieldset>
+              ))}
 
-                {groups.map((group) => (
-                  <fieldset class="mt-6">
-                    <legend class="font-display text-lg font-semibold text-ink-900">{group.title}</legend>
-                    {group.items.length === 0 && <p class="mt-2 text-sm">Nog geen smaken in deze groep.</p>}
-                    <ul class="mt-2 divide-y divide-sun-100">
-                      {group.items.map((f) => (
-                        <li class="flex items-center gap-3 py-1">
-                          <label class="flex flex-1 cursor-pointer items-center gap-3 py-2">
-                            <input
-                              type="checkbox"
-                              name="beschikbaar"
-                              value={f.id}
-                              checked={f.available}
-                              class="h-7 w-7 shrink-0 accent-mint-600"
-                            />
-                            <span class="text-lg font-semibold text-ink-900">{f.name}</span>
-                            {f.vegan && <span class="text-xs font-extrabold uppercase text-mint-600">vegan</span>}
-                          </label>
-                          <button
-                            type="submit"
-                            name="intent"
-                            value={`smaak-verwijderen:${f.id}`}
-                            formnovalidate
-                            data-bevestig={`"${f.name}" definitief uit de lijst verwijderen?`}
-                            class="rounded-full px-3 py-2 text-sm font-bold text-berry-700 hover:bg-berry-100"
-                            aria-label={`${f.name} verwijderen`}
-                          >
-                            Verwijder
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </fieldset>
-                ))}
+              <label for="smaken-mededeling" class="mt-5 block font-bold text-ink-900">
+                Korte mededeling bij de smaken <span class="font-normal">(optioneel)</span>
+              </label>
+              <input
+                id="smaken-mededeling"
+                name="smaken-mededeling"
+                maxlength="280"
+                value={flavourData!.note}
+                placeholder="Bv. Pistache is op, morgen terug!"
+                class={`${input} mt-1`}
+              />
 
-                <label for="smaken-mededeling" class="mt-6 block font-bold text-ink-900">
-                  Mededeling bij de smaken <span class="font-normal">(optioneel)</span>
+              <div class={saveBar}>
+                <Feedback result={feedback('smaken')} />
+                <span data-status class="hidden text-sm font-bold text-berry-700" aria-live="polite">Nog niet opgeslagen</span>
+                <button type="submit" name="intent" value="smaken-opslaan" class={primary}>Smaken opslaan</button>
+              </div>
+            </form>
+
+            <form method="POST" id="smaak-nieuw" class={card}>
+              <h2 class={h2}>Nieuwe smaak</h2>
+              <label for="naam" class="mt-3 block font-bold text-ink-900">Naam</label>
+              <input id="naam" name="naam" required maxlength="40" placeholder="Bv. Tiramisu" autocapitalize="sentences" class={`${input} mt-1`} />
+              <div class="mt-3 grid grid-cols-2 gap-2">
+                <label class="flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 border-sun-200 font-bold has-checked:border-ink-800 has-checked:bg-sun-100">
+                  <input type="radio" name="soort" value="roomijs" checked class="h-5 w-5 accent-ink-900" /> Roomijs
                 </label>
-                <input
-                  id="smaken-mededeling"
-                  name="smaken-mededeling"
-                  maxlength="280"
-                  value={flavourData!.note}
-                  placeholder="Bv. Pistache is op, morgen terug!"
-                  class={`${input} mt-1`}
-                />
-
-                <div class="fixed inset-x-0 bottom-0 z-20 border-t border-sun-200 bg-white/95 backdrop-blur">
-                  <div class="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
-                    <span id="smaken-status" class="text-sm font-semibold text-berry-700" aria-live="polite"></span>
-                    <button type="submit" name="intent" value="smaken-opslaan" class={primary}>
-                      Smaken opslaan
-                    </button>
-                  </div>
-                </div>
-              </form>
-
-              <form method="POST" class={`${card} mt-4`}>
-                <h3 class="text-xl font-semibold text-ink-900">Nieuwe smaak toevoegen</h3>
-                <div class="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
-                  <div>
-                    <label for="naam" class="sr-only">Naam van de smaak</label>
-                    <input id="naam" name="naam" required maxlength="40" placeholder="Naam, bv. Tiramisu" class={input} />
-                  </div>
-                  <select name="soort" aria-label="Soort" class={input}>
-                    <option value="roomijs">Roomijs</option>
-                    <option value="sorbet">Sorbet</option>
-                  </select>
-                </div>
-                <label class="mt-3 flex items-center gap-2 font-semibold">
-                  <input type="checkbox" name="vegan" class="h-5 w-5 accent-mint-600" /> Vegan
+                <label class="flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 border-sun-200 font-bold has-checked:border-ink-800 has-checked:bg-sun-100">
+                  <input type="radio" name="soort" value="sorbet" class="h-5 w-5 accent-ink-900" /> Sorbet
                 </label>
-                <button type="submit" name="intent" value="smaak-toevoegen" class={`${primary} mt-4`}>
-                  Toevoegen
-                </button>
-              </form>
-            </section>
+              </div>
+              <label class="mt-3 flex min-h-12 items-center gap-3 font-bold">
+                <input type="checkbox" name="vegan" class="h-6 w-6 accent-mint-600" /> Vegan
+              </label>
+              <Feedback result={feedback('smaak-nieuw')} class="mt-3" />
+              <button type="submit" name="intent" value="smaak-toevoegen" class={`${primary} mt-3`}>Toevoegen</button>
+            </form>
 
             {/* ---------------- Openingsuren ---------------- */}
-            <section id="uren" class="scroll-mt-20">
-              <form method="POST" class={card}>
-                <h2 class="text-2xl font-semibold text-ink-900">Openingsuren per dag</h2>
-                <p class="mt-1 text-sm">Het gewone weekschema tijdens het seizoen. Voor één bepaalde dag gebruik je een uitzondering hieronder.</p>
+            <form method="POST" id="weekschema" class={card}>
+              <h2 class={h2}>Openingsuren</h2>
+              <p class={help}>Het gewone weekschema. Eén dag anders? Gebruik een uitzondering hieronder.</p>
 
-                <div class="mt-5 space-y-3">
-                  {DAYS.map((d) => {
-                    const day = hours!.week[d.key];
-                    return (
-                      <fieldset class="rounded-2xl bg-sun-50 p-3" data-dag>
-                        <legend class="sr-only">{d.label}</legend>
-                        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-                          <span class="w-24 font-bold text-ink-900" aria-hidden="true">{d.label}</span>
-                          <label class="flex items-center gap-2 text-sm font-semibold">
-                            <input type="checkbox" name={`${d.key}-gesloten`} checked={day.closed} class="h-5 w-5 accent-berry-600" data-gesloten />
-                            Gesloten
-                          </label>
-                          <div class="flex items-center gap-2" data-uren>
-                            <label class="sr-only" for={`${d.key}-open`}>{d.label} open om</label>
-                            <input id={`${d.key}-open`} type="time" name={`${d.key}-open`} value={day.opens} class={`${input} w-32`} />
-                            <span>tot</span>
-                            <label class="sr-only" for={`${d.key}-dicht`}>{d.label} dicht om</label>
-                            <input id={`${d.key}-dicht`} type="time" name={`${d.key}-dicht`} value={day.closes} class={`${input} w-32`} />
-                          </div>
-                        </div>
-                      </fieldset>
-                    );
-                  })}
-                </div>
+              <div class="mt-4 space-y-2">
+                {DAYS.map((d) => {
+                  const day = hours!.week[d.key];
+                  return (
+                    <fieldset class="rounded-2xl bg-sun-50 p-3" data-dag>
+                      <legend class="sr-only">{d.label}</legend>
+                      <div class="flex items-center justify-between gap-3">
+                        <span class="text-lg font-bold text-ink-900" aria-hidden="true">{d.label}</span>
+                        <label class="flex min-h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-bold has-checked:bg-berry-100 has-checked:text-berry-700">
+                          <input type="checkbox" name={`${d.key}-gesloten`} checked={day.closed} class="h-5 w-5 accent-berry-600" data-gesloten />
+                          Gesloten
+                        </label>
+                      </div>
+                      <div class="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2" data-uren>
+                        <label class="sr-only" for={`${d.key}-open`}>{d.label} open om</label>
+                        <input id={`${d.key}-open`} type="time" name={`${d.key}-open`} value={day.opens} class={input} />
+                        <span class="font-semibold">tot</span>
+                        <label class="sr-only" for={`${d.key}-dicht`}>{d.label} dicht om</label>
+                        <input id={`${d.key}-dicht`} type="time" name={`${d.key}-dicht`} value={day.closes} class={input} />
+                      </div>
+                    </fieldset>
+                  );
+                })}
+              </div>
 
-                <h3 class="mt-7 text-xl font-semibold text-ink-900">Seizoen</h3>
-                <p class="mt-1 text-sm">Buiten deze periode toont de site "winterstop" en de datum waarop jullie terug opengaan.</p>
-                <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                  <label class="font-semibold">
-                    Eerste dag
-                    <input type="date" name="seizoen-start" value={hours!.seasonStart} required class={`${input} mt-1`} />
-                  </label>
-                  <label class="font-semibold">
-                    Laatste dag
-                    <input type="date" name="seizoen-einde" value={hours!.seasonEnd} required class={`${input} mt-1`} />
-                  </label>
-                </div>
-
-                <h3 class="mt-7 text-xl font-semibold text-ink-900">Mededeling bovenaan de site</h3>
-                <p class="mt-1 text-sm">Verschijnt als balk bovenaan elke bezoeker zijn scherm. Leeg laten om niets te tonen.</p>
-                <input
-                  name="mededeling"
-                  maxlength="200"
-                  value={hours!.notice}
-                  placeholder="Bv. Zaterdag uitzonderlijk open tot 23 uur!"
-                  class={`${input} mt-2`}
-                />
-
-                <button type="submit" name="intent" value="uren-opslaan" class={`${primary} mt-6`}>
-                  Openingsuren opslaan
-                </button>
-              </form>
-            </section>
+              <div class={saveBar}>
+                <Feedback result={feedback('weekschema')} />
+                <button type="submit" name="intent" value="weekschema" class={primary}>Openingsuren opslaan</button>
+              </div>
+            </form>
 
             {/* ---------------- Uitzonderingen ---------------- */}
-            <section id="uitzonderingen" class="scroll-mt-20">
-              <div class={card}>
-                <h2 class="text-2xl font-semibold text-ink-900">Uitzonderingen</h2>
-                <p class="mt-1 text-sm">Een dag dicht, of andere uren dan normaal? Die gaan voor op het weekschema. Voorbije dagen verdwijnen vanzelf.</p>
+            <section id="uitzonderingen" class={card}>
+              <h2 class={h2}>Uitzonderingen</h2>
+              <p class={help}>Een dag dicht of andere uren dan normaal. Voorbije dagen verdwijnen vanzelf.</p>
 
-                {exceptions.length > 0 ? (
-                  <form method="POST">
-                    <ul class="mt-4 divide-y divide-sun-100">
-                      {exceptions.map((e) => (
-                        <li class="flex items-center justify-between gap-3 py-3">
-                          <span>
-                            <strong class="text-ink-900 first-letter:uppercase">{formatDate(e.date)}</strong>
-                            <br />
-                            {e.closed ? 'Gesloten' : `${e.opens} tot ${e.closes}`}
-                            {e.note && <span class="text-sm"> ({e.note})</span>}
-                          </span>
-                          <button
-                            type="submit"
-                            name="intent"
-                            value={`uitzondering-verwijderen:${e.date}`}
-                            data-bevestig="Deze uitzondering verwijderen?"
-                            class="rounded-full px-3 py-2 text-sm font-bold text-berry-700 hover:bg-berry-100"
-                          >
-                            Verwijder
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </form>
-                ) : (
-                  <p class="mt-4 text-sm font-semibold">Er staan geen uitzonderingen gepland.</p>
-                )}
-
-                <form method="POST" class="mt-6 rounded-2xl bg-sun-50 p-4" data-uitzondering>
-                  <h3 class="text-lg font-semibold text-ink-900">Uitzondering toevoegen</h3>
-                  <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                    <label class="font-semibold">
-                      Datum
-                      <input type="date" name="datum" required class={`${input} mt-1`} />
-                    </label>
-                    <label class="flex items-center gap-2 self-end pb-3 font-semibold">
-                      <input type="checkbox" name="gesloten" class="h-5 w-5 accent-berry-600" data-gesloten />
-                      Hele dag gesloten
-                    </label>
-                  </div>
-                  <div class="mt-3 flex items-center gap-2" data-uren>
-                    <label class="sr-only" for="uitz-open">Open om</label>
-                    <input id="uitz-open" type="time" name="open" value="13:00" class={`${input} w-32`} />
-                    <span>tot</span>
-                    <label class="sr-only" for="uitz-dicht">Dicht om</label>
-                    <input id="uitz-dicht" type="time" name="dicht" value="21:00" class={`${input} w-32`} />
-                  </div>
-                  <label class="mt-3 block font-semibold">
-                    Reden <span class="font-normal">(optioneel, zichtbaar op de site)</span>
-                    <input name="reden" maxlength="80" placeholder="Bv. privéfeest, kermis Alken" class={`${input} mt-1`} />
-                  </label>
-                  <button type="submit" name="intent" value="uitzondering-toevoegen" class={`${primary} mt-4`}>
-                    Uitzondering opslaan
-                  </button>
+              {exceptions.length > 0 ? (
+                <form method="POST">
+                  <ul class="mt-3 space-y-2">
+                    {exceptions.map((e) => (
+                      <li class="flex items-center justify-between gap-3 rounded-2xl bg-sun-50 p-3">
+                        <span class="min-w-0">
+                          <strong class="block text-ink-900 first-letter:uppercase">{formatDate(e.date)}</strong>
+                          {e.closed ? 'Gesloten' : `${e.opens} tot ${e.closes}`}
+                          {e.note && <span class="text-sm"> ({e.note})</span>}
+                        </span>
+                        <button
+                          type="submit"
+                          name="intent"
+                          value={`uitzondering-verwijderen:${e.date}`}
+                          data-bevestig="Deze uitzondering verwijderen?"
+                          class="min-h-11 shrink-0 rounded-full bg-berry-100 px-4 text-sm font-bold text-berry-700"
+                        >
+                          Verwijder
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </form>
-              </div>
+              ) : (
+                <p class="mt-3 rounded-2xl bg-sun-50 p-3 text-[15px] font-semibold">Er staan geen uitzonderingen gepland.</p>
+              )}
+
+              <form method="POST" class="mt-5 border-t border-sun-100 pt-4" data-uitzondering>
+                <h3 class="text-lg font-semibold text-ink-900">Uitzondering toevoegen</h3>
+                <label for="uitz-datum" class="mt-2 block font-bold text-ink-900">Datum</label>
+                <input id="uitz-datum" type="date" name="datum" required class={`${input} mt-1`} />
+                <label class="mt-3 flex min-h-12 items-center gap-3 font-bold">
+                  <input type="checkbox" name="gesloten" class="h-6 w-6 accent-berry-600" data-gesloten />
+                  Hele dag gesloten
+                </label>
+                <div class="mt-1 grid grid-cols-[1fr_auto_1fr] items-center gap-2" data-uren>
+                  <label class="sr-only" for="uitz-open">Open om</label>
+                  <input id="uitz-open" type="time" name="open" value="13:00" class={input} />
+                  <span class="font-semibold">tot</span>
+                  <label class="sr-only" for="uitz-dicht">Dicht om</label>
+                  <input id="uitz-dicht" type="time" name="dicht" value="21:00" class={input} />
+                </div>
+                <label for="uitz-reden" class="mt-3 block font-bold text-ink-900">
+                  Reden <span class="font-normal">(optioneel, staat op de site)</span>
+                </label>
+                <input id="uitz-reden" name="reden" maxlength="80" placeholder="Bv. privéfeest" class={`${input} mt-1`} />
+                <Feedback result={feedback('uitzonderingen')} class="mt-3" />
+                <button type="submit" name="intent" value="uitzondering-toevoegen" class={`${primary} mt-3`}>Uitzondering opslaan</button>
+              </form>
             </section>
 
-            <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
-              <a href="/" target="_blank" class="font-bold text-berry-700 underline">Bekijk de website</a>
-              <form method="POST">
-                <button type="submit" name="intent" value="uitloggen" class="rounded-full border-2 border-ink-800/20 px-5 py-2 font-bold hover:bg-sun-100">
-                  Afmelden
-                </button>
-              </form>
-            </div>
+            {/* ---------------- Seizoen ---------------- */}
+            <form method="POST" id="seizoen" class={card}>
+              <h2 class={h2}>Seizoen</h2>
+              <p class={help}>Buiten deze periode toont de site "winterstop" en wanneer jullie terug opengaan.</p>
+              <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label for="seizoen-start" class="font-bold text-ink-900">Eerste dag</label>
+                  <input id="seizoen-start" type="date" name="seizoen-start" value={hours!.seasonStart} required class={`${input} mt-1`} />
+                </div>
+                <div>
+                  <label for="seizoen-einde" class="font-bold text-ink-900">Laatste dag</label>
+                  <input id="seizoen-einde" type="date" name="seizoen-einde" value={hours!.seasonEnd} required class={`${input} mt-1`} />
+                </div>
+              </div>
+              <Feedback result={feedback('seizoen')} class="mt-3" />
+              <button type="submit" name="intent" value="seizoen" class={`${primary} mt-4`}>Seizoen opslaan</button>
+            </form>
+
+            {/* ---------------- Mededeling ---------------- */}
+            <form method="POST" id="mededeling" class={card}>
+              <h2 class={h2}>Mededeling op de site</h2>
+              <p class={help}>Verschijnt als gekleurde balk bovenaan de website. Maak het veld leeg om de balk weg te halen.</p>
+              <label for="mededeling-tekst" class="sr-only">Mededeling</label>
+              <textarea
+                id="mededeling-tekst"
+                name="mededeling"
+                maxlength="200"
+                rows="2"
+                placeholder="Bv. Zaterdag uitzonderlijk open tot 23 uur!"
+                class={`${input} mt-3`}>{hours!.notice}</textarea>
+              <Feedback result={feedback('mededeling')} class="mt-3" />
+              <button type="submit" name="intent" value="mededeling" class={`${primary} mt-3`}>Mededeling opslaan</button>
+            </form>
+
+            <form method="POST" class="flex justify-center pt-2">
+              <button type="submit" name="intent" value="uitloggen" class="min-h-12 rounded-full border-2 border-ink-800/20 px-6 font-bold hover:bg-sun-100">
+                Afmelden
+              </button>
+            </form>
           </main>
         </>
       )
@@ -432,26 +452,29 @@ const primary = 'rounded-full bg-ink-900 px-6 py-3 font-bold text-sun-100 hover:
         });
       });
 
-      // Uurvelden dimmen als een dag op "gesloten" staat.
+      // Uurvelden verbergen als een dag op "gesloten" staat. Ze blijven wel in het
+      // formulier, zodat de uren bewaard blijven voor als de dag terug opengaat.
       document.querySelectorAll<HTMLElement>('[data-dag], [data-uitzondering]').forEach((row) => {
         const closed = row.querySelector<HTMLInputElement>('[data-gesloten]');
         const times = row.querySelector<HTMLElement>('[data-uren]');
-        const sync = () => times?.classList.toggle('opacity-30', !!closed?.checked);
+        const sync = () => times?.classList.toggle('hidden', !!closed?.checked);
         closed?.addEventListener('change', sync);
         sync();
       });
 
-      // Smakenlijst: teller, "alles aan/uit" en een waarschuwing bij niet-opgeslagen wijzigingen.
-      const form = document.getElementById('smaken-form') as HTMLFormElement | null;
+      // Smakenlijst: teller, alles aan/uit, verwijdermodus en een waarschuwing bij
+      // niet-opgeslagen wijzigingen.
+      const form = document.querySelector<HTMLFormElement>('[data-smaken]');
       if (form) {
         const boxes = [...form.querySelectorAll<HTMLInputElement>('input[name="beschikbaar"]')];
-        const counter = document.getElementById('smaken-teller');
-        const status = document.getElementById('smaken-status');
+        const counter = form.querySelector('[data-teller]');
+        const status = form.querySelector('[data-status]');
         let dirty = false;
         const markDirty = () => {
           dirty = true;
           if (counter) counter.textContent = String(boxes.filter((b) => b.checked).length);
-          if (status) status.textContent = 'Niet opgeslagen';
+          status?.classList.remove('hidden');
+          form.querySelector('[data-feedback]')?.remove();
         };
         form.addEventListener('input', markDirty);
         form.querySelectorAll<HTMLButtonElement>('[data-alles]').forEach((button) =>
@@ -460,6 +483,13 @@ const primary = 'rounded-full bg-ink-900 px-6 py-3 font-bold text-sun-100 hover:
             markDirty();
           }),
         );
+        const edit = form.querySelector<HTMLButtonElement>('[data-bewerk]');
+        edit?.addEventListener('click', () => {
+          const on = edit.getAttribute('aria-pressed') !== 'true';
+          edit.setAttribute('aria-pressed', String(on));
+          edit.textContent = on ? 'Klaar' : 'Verwijderen';
+          form.querySelectorAll<HTMLElement>('[data-verwijder]').forEach((b) => (b.hidden = !on));
+        });
         form.addEventListener('submit', () => (dirty = false));
         window.addEventListener('beforeunload', (event) => {
           if (dirty) event.preventDefault();

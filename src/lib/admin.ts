@@ -8,7 +8,13 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export class FormError extends Error {}
 
-const text = (form: FormData, key: string, max: number) => String(form.get(key) ?? '').trim().slice(0, max);
+// Onleesbare tekens (� door een verkeerde tekencodering) en stuurtekens weren,
+// zodat die nooit op de publieke site belanden.
+const text = (form: FormData, key: string, max: number) =>
+  String(form.get(key) ?? '')
+    .replace(/[�\u0000-\u001F\u007F]/g, '')
+    .trim()
+    .slice(0, max);
 
 function time(form: FormData, key: string, label: string): string {
   const value = text(form, key, 5);
@@ -26,8 +32,8 @@ function checkRange(opens: string, closes: string, label: string) {
   if (opens >= closes) throw new FormError(`${label}: het sluitingsuur moet na het openingsuur liggen.`);
 }
 
-/** Weekschema, seizoen en mededeling. */
-export function parseHours(form: FormData, current: HoursData): HoursData {
+/** Het gewone weekschema. */
+export function parseWeek(form: FormData, current: HoursData): HoursData {
   const week = { ...current.week };
   for (const d of DAYS) {
     const closed = form.get(`${d.key}-gesloten`) === 'on';
@@ -40,11 +46,18 @@ export function parseHours(form: FormData, current: HoursData): HoursData {
     checkRange(opens, closes, d.label);
     week[d.key] = { closed: false, opens, closes };
   }
-  const seasonStart = date(form, 'seizoen-start', 'Begin seizoen');
-  const seasonEnd = date(form, 'seizoen-einde', 'Einde seizoen');
-  if (seasonStart > seasonEnd) throw new FormError('Het seizoen moet eindigen na de startdatum.');
+  return { ...current, week };
+}
 
-  return { ...current, week, seasonStart, seasonEnd, notice: text(form, 'mededeling', 200) };
+export function parseSeason(form: FormData, current: HoursData): HoursData {
+  const seasonStart = date(form, 'seizoen-start', 'Eerste dag');
+  const seasonEnd = date(form, 'seizoen-einde', 'Laatste dag');
+  if (seasonStart > seasonEnd) throw new FormError('Het seizoen moet eindigen na de startdatum.');
+  return { ...current, seasonStart, seasonEnd };
+}
+
+export function parseNotice(form: FormData, current: HoursData): HoursData {
+  return { ...current, notice: text(form, 'mededeling', 200) };
 }
 
 export function parseException(form: FormData, current: HoursData): HoursData {

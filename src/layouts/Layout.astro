@@ -9,7 +9,7 @@ interface Props {
   description: string;
   /** Live uren: enkel meegeven op on-demand pagina's, anders veroudert de structured data. */
   hours?: HoursData;
-  /** Extra schema.org-nodes voor deze pagina (FAQPage, BreadcrumbList, …). */
+  /** Extra schema.org-nodes voor deze pagina (BreadcrumbList, Service, …). */
   schema?: Record<string, unknown>[];
   noindex?: boolean;
 }
