@@ -1,0 +1,38 @@
+---
+import { Picture } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+// Sfeerfoto's: zet ze in src/assets/sfeer/. De bestandsnaam bepaalt de volgorde,
+// en wordt ook de alt-tekst ("terras-in-de-zon.jpg" → "Terras in de zon").
+const files = import.meta.glob<{ default: ImageMetadata }>('../assets/sfeer/*.{jpg,jpeg,png,webp,avif}', { eager: true });
+
+const photos = Object.entries(files)
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([path, mod]) => {
+    const base = path.split('/').pop()!.replace(/\.[^.]+$/, '').replace(/^\d+[-_]/, '');
+    const alt = base.replace(/[-_]+/g, ' ');
+    return { src: mod.default, alt: alt.charAt(0).toUpperCase() + alt.slice(1) };
+  });
+---
+
+{
+  photos.length > 0 && (
+    <section id="sfeer" class="bg-white py-16">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6">
+        <h2 class="text-3xl font-semibold text-ink-900 sm:text-4xl">Een kijkje in de zaak</h2>
+        <div class="mt-8 grid grid-cols-2 gap-3 md:grid-cols-3">
+          {photos.map((photo, i) => (
+            <Picture
+              src={photo.src}
+              alt={photo.alt}
+              formats={['avif', 'webp']}
+              widths={[400, 800]}
+              sizes="(min-width: 768px) 33vw, 50vw"
+              class:list={['h-full w-full rounded-2xl object-cover', i === 0 ? 'col-span-2 row-span-2 aspect-square' : 'aspect-square']}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}

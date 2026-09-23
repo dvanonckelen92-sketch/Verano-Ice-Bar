@@ -1,0 +1,28 @@
+# build output
+dist/
+.netlify/
+
+# generated types
+.astro/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+
+# environment variables
+.env
+.env.production
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# lokale Claude-configuratie
+.claude/

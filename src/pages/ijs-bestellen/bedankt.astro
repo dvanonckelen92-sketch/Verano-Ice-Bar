@@ -1,0 +1,19 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { BUSINESS } from '../../consts';
+---
+
+<Layout title="Aanvraag ontvangen | Verano Ice Bar" description="Bedankt voor je aanvraag voor liters ijs bij Verano Ice Bar." noindex>
+  <Header />
+  <main class="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
+    <h1 class="text-4xl font-semibold text-ink-900">Bedankt, we hebben je aanvraag</h1>
+    <p class="mt-4 text-lg text-ink-800">
+      We nemen zo snel mogelijk contact met je op om je bestelling te bevestigen. Dringend? Bel ons op
+      {' '}<a href={BUSINESS.phoneHref} class="font-bold text-berry-700 underline">{BUSINESS.phone}</a>.
+    </p>
+    <a href="/" class="mt-8 inline-block rounded-full bg-ink-900 px-6 py-3 font-bold text-sun-100 hover:bg-ink-700">Terug naar de homepage</a>
+  </main>
+  <Footer />
+</Layout>

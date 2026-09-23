@@ -1,0 +1,19 @@
+---
+import { SITE, BUSINESS, AGENCY } from '../consts';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="bg-ink-900 text-sun-100/80">
+  <div class="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-sm sm:px-6">
+    <p>
+      &copy; {year} {SITE.name}, {BUSINESS.streetAddress}, {BUSINESS.postalCode} {BUSINESS.addressLocality}. Btw {BUSINESS.vatNumber}.
+    </p>
+    <p class="flex flex-wrap gap-x-5 gap-y-1">
+      <a href="/privacybeleid" class="underline hover:text-sun-200">Privacybeleid</a>
+      <span>
+        Website door <a href={AGENCY.url} target="_blank" rel="noopener" class="underline hover:text-sun-200">{AGENCY.name}</a>
+      </span>
+    </p>
+  </div>
+</footer>

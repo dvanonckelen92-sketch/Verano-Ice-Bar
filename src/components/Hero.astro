@@ -1,0 +1,72 @@
+---
+import { Image } from 'astro:assets';
+import logo from '../assets/logo.svg';
+import { BUSINESS } from '../consts';
+import { brusselsNow, openStatus, resolveDay, formatRange, type HoursData } from '../lib/hours';
+
+interface Props {
+  hours: HoursData;
+}
+
+const { hours } = Astro.props;
+const status = openStatus(hours);
+const today = resolveDay(hours, brusselsNow().date);
+---
+
+<section class="relative overflow-hidden bg-sun-300">
+  <div class="mx-auto grid max-w-6xl items-center gap-10 px-4 py-12 sm:px-6 sm:py-16 md:grid-cols-[1.3fr_1fr]">
+    <div>
+      <p
+        id="open-status"
+        data-hours={JSON.stringify(hours)}
+        class="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-sm font-bold text-ink-800 shadow-sm"
+        aria-live="polite"
+      >
+        <span class:list={['h-2.5 w-2.5 rounded-full', status.open ? 'bg-mint-600' : 'bg-berry-600']} aria-hidden="true"></span>
+        <span data-label>{status.label}</span>
+      </p>
+
+      <h1 class="mt-5 text-4xl font-semibold leading-[1.1] text-ink-900 sm:text-5xl lg:text-6xl">
+        IJssalon in Alken met dagvers, huisbereid ijs
+      </h1>
+      <p class="mt-4 max-w-xl text-lg text-ink-800">
+        Bij Verano Ice Bar op de {BUSINESS.streetAddress} draaien we elke dag ons eigen roomijs en sorbet.
+        {today.open && today.opens && today.closes ? ` Vandaag open van ${formatRange(today.opens, today.closes)}.` : ''}
+      </p>
+
+      <div class="mt-7 flex flex-wrap gap-3">
+        <a href="#smaken" class="rounded-full bg-ink-900 px-6 py-3 font-bold text-sun-100 shadow-sm hover:bg-ink-700">
+          Smaken van vandaag
+        </a>
+        <a href="/ijs-bestellen" class="rounded-full border-2 border-ink-900 px-6 py-2.5 font-bold text-ink-900 hover:bg-sun-200">
+          Liters ijs bestellen
+        </a>
+      </div>
+    </div>
+
+    <div class="mx-auto hidden w-full max-w-sm md:block">
+      <Image src={logo} alt="Logo van Verano Ice Bar" width={400} height={400} loading="eager" class="h-auto w-full drop-shadow-xl" />
+    </div>
+  </div>
+</section>
+
+<script>
+  import { openStatus, type HoursData } from '../lib/hours';
+
+  // De pagina kan tot vijf minuten in de CDN-cache zitten; de status rekenen we
+  // daarom in de browser opnieuw uit, en daarna elke minuut.
+  const badge = document.getElementById('open-status');
+  if (badge?.dataset.hours) {
+    const hours = JSON.parse(badge.dataset.hours) as HoursData;
+    const dot = badge.querySelector('span');
+    const label = badge.querySelector('[data-label]');
+    const update = () => {
+      const status = openStatus(hours);
+      if (label) label.textContent = status.label;
+      dot?.classList.toggle('bg-mint-600', status.open);
+      dot?.classList.toggle('bg-berry-600', !status.open);
+    };
+    update();
+    setInterval(update, 60_000);
+  }
+</script>

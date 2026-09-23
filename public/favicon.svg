@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Verano Ice Bar">
+  <!-- VOORLOPIG: nagetekend naar het logo op Facebook. Vervangen door het originele logobestand van de klant. -->
+  <circle cx="120" cy="120" r="118" fill="#f6dd66"/>
+  <g transform="translate(18 60)">
+    <path d="M18 44 L30 92 L42 44 Z" fill="#d9a55a" stroke="#2b2535" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M22 56 L38 56 M24 68 L36 68" stroke="#2b2535" stroke-width="2"/>
+    <circle cx="22" cy="36" r="12" fill="#8f7cc4" stroke="#2b2535" stroke-width="3"/>
+    <circle cx="38" cy="36" r="12" fill="#f3a7c1" stroke="#2b2535" stroke-width="3"/>
+    <circle cx="30" cy="22" r="12" fill="#a8dcc5" stroke="#2b2535" stroke-width="3"/>
+  </g>
+  <text x="100" y="132" font-family="'Brush Script MT', 'Segoe Script', cursive" font-size="58" fill="#2b2535">erano</text>
+  <text x="74" y="132" font-family="'Brush Script MT', 'Segoe Script', cursive" font-size="72" fill="#2b2535">V</text>
+  <text x="146" y="156" font-family="Arial, sans-serif" font-size="15" letter-spacing="2" fill="#8f7cc4">ICE BAR</text>
+  <path d="M70 168 Q130 150 196 160" fill="none" stroke="#2b2535" stroke-width="3" stroke-linecap="round"/>
+</svg>

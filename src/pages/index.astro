@@ -1,0 +1,85 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Notice from '../components/Notice.astro';
+import Hero from '../components/Hero.astro';
+import Flavours from '../components/Flavours.astro';
+import OpeningHours from '../components/OpeningHours.astro';
+import OrderTeaser from '../components/OrderTeaser.astro';
+import Gallery from '../components/Gallery.astro';
+import Amenities from '../components/Amenities.astro';
+import Faq, { type FaqItem } from '../components/Faq.astro';
+import Contact from '../components/Contact.astro';
+import Footer from '../components/Footer.astro';
+import { BUSINESS, LITERS } from '../consts';
+import { DAYS, formatRange } from '../lib/hours';
+import { getFlavours, getHours } from '../lib/store';
+import { setLiveCacheHeaders } from '../lib/cache';
+
+// On demand: smaken en uren komen live uit de store. De CDN bewaart de pagina
+// kort en wordt gewist zodra er in /beheer iets wijzigt.
+export const prerender = false;
+
+const [hours, flavours] = await Promise.all([getHours(), getFlavours()]);
+setLiveCacheHeaders(Astro.response.headers);
+
+const openDays = DAYS.filter((d) => !hours.week[d.key].closed);
+const restDays = DAYS.filter((d) => hours.week[d.key].closed).map((d) => d.label.toLowerCase());
+const sameHours = openDays.every(
+  (d) => hours.week[d.key].opens === hours.week[openDays[0].key].opens && hours.week[d.key].closes === hours.week[openDays[0].key].closes,
+);
+const hoursSentence =
+  openDays.length > 0 && sameHours
+    ? `Verano Ice Bar is tijdens het seizoen elke dag open van ${formatRange(hours.week[openDays[0].key].opens, hours.week[openDays[0].key].closes)}${restDays.length ? `, behalve op ${restDays.join(' en ')}` : ''}.`
+    : `Verano Ice Bar is tijdens het seizoen open op ${openDays.map((d) => `${d.label.toLowerCase()} (${formatRange(hours.week[d.key].opens, hours.week[d.key].closes)})`).join(', ')}.`;
+
+const faq: FaqItem[] = [
+  {
+    question: 'Wanneer is Verano Ice Bar in Alken open?',
+    answer: `${hoursSentence} In het najaar en de winter is de ijssalon gesloten. Afwijkende uren staan altijd bovenaan deze pagina.`,
+  },
+  {
+    question: 'Kan je bij Verano Ice Bar liters ijs bestellen?',
+    answer: `Ja, bij Verano Ice Bar kan je ijs per liter bestellen, van ${LITERS.sizes[0]} tot ${LITERS.sizes.at(-1)}, in smaken naar keuze. Vraag het minstens ${LITERS.leadDays} dagen op voorhand aan via het bestelformulier of telefonisch op ${BUSINESS.phone}.`,
+  },
+  {
+    question: 'Welke smaken heeft Verano Ice Bar vandaag?',
+    answer:
+      'De smaken van vandaag staan live op deze website. Verano Ice Bar past de lijst doorheen de dag aan wanneer een smaak uitverkocht is of er een nieuwe bijkomt.',
+  },
+  {
+    question: 'Heeft Verano Ice Bar een terras?',
+    answer: 'Ja, Verano Ice Bar in Alken heeft een terras. Er is ook een toilet voor klanten en een fietsenstalling voor wie met de fiets komt.',
+  },
+];
+
+const faqSchema = {
+  '@type': 'FAQPage',
+  mainEntity: faq.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: { '@type': 'Answer', text: item.answer },
+  })),
+};
+---
+
+<Layout
+  title="IJssalon in Alken met dagvers ijs | Verano Ice Bar"
+  description="Verano Ice Bar is een ijssalon in Alken met dagvers, huisbereid roomijs en sorbet. Bekijk de smaken van vandaag, de openingsuren en bestel liters ijs."
+  hours={hours}
+  schema={[faqSchema]}
+>
+  <Notice text={hours.notice} />
+  <Header />
+  <main>
+    <Hero hours={hours} />
+    <Flavours data={flavours} />
+    <OpeningHours hours={hours} />
+    <OrderTeaser />
+    <Gallery />
+    <Amenities />
+    <Faq items={faq} />
+    <Contact />
+  </main>
+  <Footer />
+</Layout>

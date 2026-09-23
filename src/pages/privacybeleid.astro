@@ -1,0 +1,96 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { SITE, BUSINESS, HOSTING } from '../consts';
+
+const lastUpdated = '23 september 2026';
+const h2 = 'font-display text-2xl font-semibold text-ink-900';
+const link = 'font-bold text-berry-700 underline';
+---
+
+<Layout
+  title="Privacybeleid | Verano Ice Bar"
+  description="Lees hoe Verano Ice Bar omgaat met je gegevens: wat we bewaren als je liters ijs aanvraagt, waar de site gehost wordt en welke rechten je hebt."
+>
+  <Header />
+  <main class="mx-auto max-w-3xl px-4 py-14 text-ink-800 sm:px-6">
+    <h1 class="text-4xl font-semibold text-ink-900">Privacybeleid</h1>
+    <p class="mt-2 text-sm">Laatst bijgewerkt op {lastUpdated}.</p>
+
+    <div class="mt-8 space-y-8 leading-relaxed">
+      <section>
+        <h2 class={h2}>1. Wie is verantwoordelijk?</h2>
+        <p class="mt-2">
+          Deze website ({SITE.url}) is van {SITE.name}, {BUSINESS.streetAddress}, {BUSINESS.postalCode} {BUSINESS.addressLocality},
+          btw {BUSINESS.vatNumber}. Vragen over je gegevens stel je via
+          {' '}<a href={`mailto:${BUSINESS.email}`} class={link}>{BUSINESS.email}</a> of op
+          {' '}<a href={BUSINESS.phoneHref} class={link}>{BUSINESS.phone}</a>.
+        </p>
+      </section>
+
+      <section>
+        <h2 class={h2}>2. Welke gegevens verwerken we?</h2>
+        <ul class="mt-2 ml-5 list-disc space-y-2">
+          <li>
+            <strong>Aanvraag voor liters ijs.</strong> Als je het bestelformulier invult, ontvangen we je naam, telefoonnummer,
+            eventueel je e-mailadres en de details van je bestelling. We gebruiken die enkel om je bestelling te bevestigen en
+            klaar te zetten. Aanvragen worden bewaard bij onze hostingpartner, en niet langer dan nodig om je bestelling af te
+            handelen.
+          </li>
+          <li>
+            <strong>Serverlogs.</strong> Zoals elke website houdt onze hostingpartner technische gegevens bij (IP-adres, tijdstip,
+            opgevraagde pagina) om de site te laten werken en tegen misbruik te beschermen.
+          </li>
+          <li>
+            <strong>Google Maps.</strong> De kaart in de contactsectie komt van Google. Zodra die laadt, geldt het privacybeleid van
+            Google en kan Google cookies plaatsen.
+          </li>
+          <li>
+            <strong>Sociale media.</strong> De links naar Facebook en Instagram brengen je naar platformen van Meta. Zolang je niet
+            doorklikt, plaatst Meta via deze website niets.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class={h2}>3. Cookies</h2>
+        <p class="mt-2">
+          Deze website plaatst zelf geen cookies voor statistieken of advertenties. De enige cookies komen van de ingesloten
+          Google Maps-kaart.
+        </p>
+      </section>
+
+      <section>
+        <h2 class={h2}>4. Waar wordt de website gehost?</h2>
+        <p class="mt-2">
+          De website en de ingestuurde formulieren staan bij {HOSTING.provider} ({HOSTING.providerAddress}). Netlify kan gegevens
+          buiten de Europese Economische Ruimte verwerken en voorziet daarvoor passende waarborgen, zoals
+          modelcontractbepalingen. Meer in het
+          {' '}<a href={HOSTING.privacyPolicyUrl} target="_blank" rel="noopener" class={link}>privacybeleid van Netlify</a>.
+        </p>
+      </section>
+
+      <section>
+        <h2 class={h2}>5. Je rechten</h2>
+        <p class="mt-2">Volgens de AVG (GDPR) heb je het recht om:</p>
+        <ul class="mt-2 ml-5 list-disc space-y-1">
+          <li>te vragen welke gegevens we over jou hebben;</li>
+          <li>foute gegevens te laten verbeteren;</li>
+          <li>je gegevens te laten verwijderen;</li>
+          <li>bezwaar te maken tegen de verwerking;</li>
+          <li>
+            klacht in te dienen bij de Gegevensbeschermingsautoriteit, Drukpersstraat 35, 1000 Brussel,
+            {' '}<a href="https://www.gegevensbeschermingsautoriteit.be" target="_blank" rel="noopener" class={link}>gegevensbeschermingsautoriteit.be</a>.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class={h2}>6. Wijzigingen</h2>
+        <p class="mt-2">We passen dit beleid aan als de website verandert. De datum bovenaan toont de laatste wijziging.</p>
+      </section>
+    </div>
+  </main>
+  <Footer />
+</Layout>

@@ -1,0 +1,150 @@
+---
+import '../styles/global.css';
+import { Font } from 'astro:assets';
+import { SITE, BUSINESS, LINKS, VOORZIENINGEN } from '../consts';
+import { DAYS, type HoursData } from '../lib/hours';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Live uren: enkel meegeven op on-demand pagina's, anders veroudert de structured data. */
+  hours?: HoursData;
+  /** Extra schema.org-nodes voor deze pagina (FAQPage, BreadcrumbList, …). */
+  schema?: Record<string, unknown>[];
+  noindex?: boolean;
+}
+
+const { title, description, hours, schema = [], noindex = false } = Astro.props;
+
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL('/og-image.png', Astro.site);
+const inLanguage = SITE.locale.replace('_', '-');
+const organizationId = `${SITE.url}/#zaak`;
+
+const business: Record<string, unknown> = {
+  '@type': 'IceCreamShop',
+  '@id': organizationId,
+  name: SITE.name,
+  description: `${SITE.tagline}. Roomijs en sorbet, terras en liters ijs op bestelling.`,
+  url: SITE.url,
+  telephone: BUSINESS.phoneIntl,
+  email: BUSINESS.email,
+  vatID: BUSINESS.vatNumber,
+  image: ogImage.toString(),
+  logo: new URL('/favicon.svg', Astro.site).toString(),
+  priceRange: '€',
+  currenciesAccepted: 'EUR',
+  servesCuisine: 'IJs',
+  hasMap: LINKS.hasMap,
+  sameAs: [LINKS.facebook, LINKS.instagram],
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: BUSINESS.streetAddress,
+    postalCode: BUSINESS.postalCode,
+    addressLocality: BUSINESS.addressLocality,
+    addressCountry: BUSINESS.addressCountry,
+  },
+  areaServed: { '@type': 'City', name: BUSINESS.addressLocality },
+  amenityFeature: VOORZIENINGEN.map((v) => ({
+    '@type': 'LocationFeatureSpecification',
+    name: v.label,
+    value: true,
+  })),
+};
+
+if (hours) {
+  const openDays = DAYS.filter((d) => !hours.week[d.key].closed);
+  business.openingHours = openDays.map(
+    (d) => `${d.schema.slice(0, 2)} ${hours.week[d.key].opens}-${hours.week[d.key].closes}`,
+  );
+  business.openingHoursSpecification = [
+    ...openDays.map((d) => ({
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: `https://schema.org/${d.schema}`,
+      opens: hours.week[d.key].opens,
+      closes: hours.week[d.key].closes,
+      validFrom: hours.seasonStart,
+      validThrough: hours.seasonEnd,
+    })),
+    // Uitzonderingen: zelfde datum als begin en einde. Gesloten = 00:00 tot 00:00.
+    ...hours.exceptions.map((e) => ({
+      '@type': 'OpeningHoursSpecification',
+      opens: e.closed ? '00:00' : e.opens,
+      closes: e.closed ? '00:00' : e.closes,
+      validFrom: e.date,
+      validThrough: e.date,
+    })),
+  ];
+}
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    business,
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE.url}/#website`,
+      url: SITE.url,
+      name: SITE.name,
+      inLanguage,
+      publisher: { '@id': organizationId },
+    },
+    {
+      '@type': 'WebPage',
+      '@id': `${canonicalURL}#webpage`,
+      url: canonicalURL.toString(),
+      name: title,
+      description,
+      inLanguage,
+      isPartOf: { '@id': `${SITE.url}/#website` },
+      about: { '@id': organizationId },
+    },
+    ...schema,
+  ],
+};
+---
+
+<!doctype html>
+<html lang={SITE.language}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#f6dd66" />
+    <meta name="generator" content={Astro.generator} />
+    <Font cssVariable="--font-fredoka" preload />
+    <Font cssVariable="--font-nunito" preload />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {
+      noindex ? (
+        <meta name="robots" content="noindex, nofollow" />
+      ) : (
+        <>
+          <link rel="canonical" href={canonicalURL} />
+          <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+          <link rel="alternate" type="text/plain" href="/llms.txt" title="LLMs.txt" />
+        </>
+      )
+    }
+    <meta name="geo.placename" content={`${BUSINESS.addressLocality}, België`} />
+    <meta name="geo.region" content="BE-VLI" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:locale" content={SITE.locale} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    {!noindex && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} is:inline />}
+  </head>
+  <body class="bg-sun-50 font-sans text-ink-800 antialiased">
+    <slot />
+  </body>
+</html>

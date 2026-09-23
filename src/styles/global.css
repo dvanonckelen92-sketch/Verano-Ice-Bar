@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+/* Kleuren afgeleid van het logo: zongeel vlak, donkere letters, pastelbolletjes. */
+@theme {
+  --color-sun-50: #fffbea;
+  --color-sun-100: #fff4c2;
+  --color-sun-200: #fbe98f;
+  --color-sun-300: #f6dd66;
+  --color-sun-400: #efcd3a;
+  --color-sun-500: #d9b41c;
+  --color-ink-700: #3a3346;
+  --color-ink-800: #2b2535;
+  --color-ink-900: #1e1926;
+  --color-berry-100: #fbe3ec;
+  --color-berry-500: #e0698f;
+  --color-berry-600: #c94d76;
+  --color-berry-700: #a83a60;
+  --color-lilac-100: #ece7f7;
+  --color-lilac-500: #8f7cc4;
+  --color-lilac-700: #5e4c96;
+  --color-mint-100: #dff4ea;
+  --color-mint-600: #2f8a62;
+
+  --font-display: var(--font-fredoka), ui-rounded, system-ui, sans-serif;
+  --font-sans: var(--font-nunito), system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-berry-600);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}

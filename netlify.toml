@@ -1,0 +1,35 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Canoniek domein zonder www (duplicate content vermijden).
+# TODO: aanpassen zodra het definitieve domein vastligt.
+[[redirects]]
+  from = "https://www.veranoicebar.be/*"
+  to = "https://veranoicebar.be/:splat"
+  status = 301
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Cross-Origin-Opener-Policy = "same-origin"
+    # 'unsafe-inline' in script-src: Astro inlinet kleine componentscripts (menu,
+    # open-status, beheer) rechtstreeks in de HTML; er is geen nonce-infrastructuur.
+    # frame-src voor de ingesloten Google Maps-kaart.
+    Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.google.com https://*.gstatic.com https://*.googleapis.com; font-src 'self' data:; frame-src https://www.google.com; connect-src 'self'; form-action 'self'"
+
+[[headers]]
+  for = "/beheer*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "private, no-store"
+
+[[headers]]
+  for = "/_astro/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

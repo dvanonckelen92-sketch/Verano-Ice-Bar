@@ -1,0 +1,79 @@
+---
+import { Image } from 'astro:assets';
+import logo from '../assets/logo.svg';
+import { BUSINESS } from '../consts';
+
+// Op subpagina's verwijzen de ankers terug naar de homepage.
+const onHome = Astro.url.pathname === '/';
+const anchor = (id: string) => (onHome ? `#${id}` : `/#${id}`);
+
+const NAV_LINKS = [
+  { href: anchor('smaken'), label: 'Smaken' },
+  { href: anchor('openingsuren'), label: 'Openingsuren' },
+  { href: '/ijs-bestellen', label: 'Liters ijs bestellen' },
+  { href: anchor('voorzieningen'), label: 'Ter plaatse' },
+  { href: anchor('contact'), label: 'Contact' },
+];
+---
+
+<header class="sticky top-0 z-40 border-b border-sun-200 bg-sun-50/95 backdrop-blur">
+  <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2.5 sm:px-6">
+    <a href="/" class="flex items-center gap-2.5" aria-label="Verano Ice Bar, naar de homepage">
+      <Image src={logo} alt="" width={48} height={48} class="h-12 w-12" loading="eager" />
+      <span class="font-display text-xl font-semibold text-ink-900">Verano Ice Bar</span>
+    </a>
+
+    <nav class="hidden items-center gap-6 text-[15px] font-semibold text-ink-700 lg:flex" aria-label="Hoofdmenu">
+      {NAV_LINKS.map((link) => <a href={link.href} class="hover:text-berry-700">{link.label}</a>)}
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <a
+        href={BUSINESS.phoneHref}
+        class="hidden rounded-full bg-ink-900 px-4 py-2 text-sm font-bold text-sun-100 hover:bg-ink-700 sm:inline-block"
+      >
+        Bel {BUSINESS.phone}
+      </a>
+      <button
+        type="button"
+        id="menu-toggle"
+        aria-label="Menu openen"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+        class="flex h-11 w-11 items-center justify-center rounded-full border border-ink-800/20 text-ink-800 lg:hidden"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-5 w-5" aria-hidden="true">
+          <line x1="4" y1="7" x2="20" y2="7"></line>
+          <line x1="4" y1="12" x2="20" y2="12"></line>
+          <line x1="4" y1="17" x2="20" y2="17"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <nav id="mobile-menu" hidden class="border-t border-sun-200 bg-sun-50 px-4 py-2 lg:hidden" aria-label="Mobiel menu">
+    {
+      NAV_LINKS.map((link) => (
+        <a href={link.href} class="block rounded-lg px-3 py-3 text-base font-semibold text-ink-800 hover:bg-sun-100">
+          {link.label}
+        </a>
+      ))
+    }
+    <a href={BUSINESS.phoneHref} class="block rounded-lg px-3 py-3 text-base font-bold text-berry-700 hover:bg-sun-100">
+      Bel {BUSINESS.phone}
+    </a>
+  </nav>
+</header>
+
+<script>
+  const toggle = document.getElementById('menu-toggle');
+  const menu = document.getElementById('mobile-menu');
+  const setOpen = (open: boolean) => {
+    if (!menu || !toggle) return;
+    menu.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? 'Menu sluiten' : 'Menu openen');
+  };
+  toggle?.addEventListener('click', () => setOpen(Boolean(menu?.hidden)));
+  menu?.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
+</script>

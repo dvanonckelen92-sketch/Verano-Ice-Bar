@@ -1,0 +1,15 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout title="Pagina niet gevonden | Verano Ice Bar" description="Deze pagina bestaat niet (meer)." noindex>
+  <Header />
+  <main class="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
+    <h1 class="text-4xl font-semibold text-ink-900">Deze pagina is gesmolten</h1>
+    <p class="mt-4 text-lg text-ink-800">De pagina die je zoekt bestaat niet (meer). De smaken van vandaag vind je op de homepage.</p>
+    <a href="/" class="mt-8 inline-block rounded-full bg-ink-900 px-6 py-3 font-bold text-sun-100 hover:bg-ink-700">Naar de homepage</a>
+  </main>
+  <Footer />
+</Layout>

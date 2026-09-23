@@ -1,0 +1,67 @@
+---
+import { BUSINESS } from '../consts';
+import { DAYS, brusselsNow, weekdayIndex, formatDate, formatRange, upcomingExceptions, type HoursData } from '../lib/hours';
+
+interface Props {
+  hours: HoursData;
+}
+
+const { hours } = Astro.props;
+const today = brusselsNow().date;
+const todayIndex = weekdayIndex(today);
+const exceptions = upcomingExceptions(hours, today);
+const closedDays = DAYS.filter((d) => hours.week[d.key].closed).map((d) => d.label.toLowerCase());
+const longDate = new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const seasonDate = (date: string) => longDate.format(new Date(`${date}T12:00:00Z`));
+const restDays = closedDays.length > 0 ? `, met ${closedDays.join(' en ')} als wekelijkse rustdag` : '';
+---
+
+<section id="openingsuren" class="py-16">
+  <div class="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 md:grid-cols-2">
+    <div>
+      <h2 class="text-3xl font-semibold text-ink-900 sm:text-4xl">Wanneer is Verano Ice Bar open?</h2>
+      <p class="mt-3 text-ink-700">
+        Het seizoen loopt van {seasonDate(hours.seasonStart)} tot en met {seasonDate(hours.seasonEnd)}{restDays}.
+      </p>
+      <p class="mt-3 text-ink-700">{BUSINESS.winterNote}</p>
+
+      {
+        exceptions.length > 0 && (
+          <div class="mt-6 rounded-2xl border-2 border-berry-500 bg-white p-5">
+            <h3 class="text-lg font-semibold text-ink-900">Afwijkende openingsuren</h3>
+            <ul class="mt-2 space-y-1.5">
+              {exceptions.map((e) => (
+                <li>
+                  <span class="font-bold first-letter:uppercase">{formatDate(e.date)}</span>:{' '}
+                  {e.closed ? 'gesloten' : formatRange(e.opens, e.closes)}
+                  {e.note && <span class="text-ink-700"> ({e.note})</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+    </div>
+
+    <table class="w-full self-start overflow-hidden rounded-3xl bg-white text-left shadow-sm">
+      <caption class="sr-only">Openingsuren per weekdag</caption>
+      <tbody>
+        {
+          DAYS.map((d, i) => {
+            const day = hours.week[d.key];
+            const isToday = i === todayIndex;
+            return (
+              <tr class:list={['border-b border-sun-100 last:border-0', isToday && 'bg-sun-200']}>
+                <th scope="row" class="px-6 py-3.5 font-bold text-ink-900">
+                  {d.label}
+                  {isToday && <span class="ml-2 text-xs font-extrabold uppercase tracking-wide text-berry-700">vandaag</span>}
+                </th>
+                <td class="px-6 py-3.5 text-right text-ink-800">{day.closed ? 'Gesloten' : formatRange(day.opens, day.closes)}</td>
+              </tr>
+            );
+          })
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

@@ -1,0 +1,79 @@
+---
+import { LINKS } from '../consts';
+import type { FlavoursData } from '../lib/store';
+
+interface Props {
+  data: FlavoursData;
+}
+
+const { data } = Astro.props;
+const available = data.flavours.filter((f) => f.available);
+const groups = [
+  { kind: 'roomijs', title: 'Roomijs', items: available.filter((f) => f.kind === 'roomijs') },
+  { kind: 'sorbet', title: 'Sorbet', items: available.filter((f) => f.kind === 'sorbet') },
+].filter((g) => g.items.length > 0);
+
+const updated = data.updatedAt
+  ? new Intl.DateTimeFormat('nl-BE', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Brussels',
+    }).format(new Date(data.updatedAt))
+  : null;
+---
+
+<section id="smaken" class="bg-white py-16">
+  <div class="mx-auto max-w-6xl px-4 sm:px-6">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 class="text-3xl font-semibold text-ink-900 sm:text-4xl">Welke smaken zijn er vandaag?</h2>
+        <p class="mt-2 max-w-2xl text-ink-700">
+          {
+            available.length > 0
+              ? `Vandaag ${available.length === 1 ? 'ligt er 1 smaak' : `liggen er ${available.length} smaken`} in de toonbank. We passen deze lijst doorheen de dag aan wanneer een smaak op is of er een nieuwe bijkomt.`
+              : 'De smakenlijst van vandaag volgt zo meteen.'
+          }
+        </p>
+      </div>
+      {updated && <p class="text-sm font-semibold text-ink-700/80">Bijgewerkt op {updated}</p>}
+    </div>
+
+    {data.note.trim() && <p class="mt-6 rounded-2xl bg-lilac-100 px-5 py-3 font-semibold text-lilac-700">{data.note}</p>}
+
+    {
+      groups.length > 0 ? (
+        <div class="mt-8 grid gap-8 md:grid-cols-2">
+          {groups.map((group) => (
+            <div>
+              <h3 class="text-xl font-semibold text-ink-900">{group.title}</h3>
+              <ul class="mt-3 flex flex-wrap gap-2">
+                {group.items.map((f) => (
+                  <li
+                    class:list={[
+                      'rounded-full px-4 py-2 font-bold',
+                      group.kind === 'sorbet' ? 'bg-berry-100 text-berry-700' : 'bg-sun-100 text-ink-800',
+                    ]}
+                  >
+                    {f.name}
+                    {f.vegan && <span class="ml-1.5 text-xs font-extrabold uppercase tracking-wide text-mint-600">vegan</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p class="mt-8 text-ink-700">
+          Kijk intussen op onze{' '}
+          <a href={LINKS.facebook} target="_blank" rel="noopener" class="font-bold text-berry-700 underline">
+            Facebookpagina
+          </a>{' '}
+          of bel even.
+        </p>
+      )
+    }
+  </div>
+</section>
