@@ -18,7 +18,7 @@ import {
   removeFlavour,
   sortFlavours,
 } from '../../lib/admin';
-import { checkCredentials, SESSION_KEY } from '../../lib/auth';
+import { checkCredentials, loginConfigProblem, SESSION_KEY } from '../../lib/auth';
 import { purgeLivePages } from '../../lib/cache';
 
 export const prerender = false;
@@ -38,6 +38,7 @@ const MESSAGES: Record<string, string> = {
 const loggedIn = (await Astro.session?.get(SESSION_KEY)) === true;
 let error: string | null = null;
 let loginError: string | null = null;
+const configProblem = loginConfigProblem();
 
 if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
@@ -45,7 +46,9 @@ if (Astro.request.method === 'POST') {
   const ip = Astro.clientAddress ?? 'onbekend';
 
   if (intent === 'login') {
-    if (await isLockedOut(ip)) {
+    if (configProblem) {
+      loginError = configProblem;
+    } else if (await isLockedOut(ip)) {
       loginError = 'Te veel mislukte pogingen. Probeer het over een kwartier opnieuw.';
     } else if (checkCredentials(String(form.get('gebruiker') ?? ''), String(form.get('wachtwoord') ?? ''))) {
       await clearFailedLogins(ip);
@@ -139,6 +142,9 @@ const primary = 'rounded-full bg-ink-900 px-6 py-3 font-bold text-sun-100 hover:
           <h1 class="mt-4 text-center text-3xl font-semibold text-ink-900">Beheer</h1>
           <form method="POST" class={`${card} mt-6 space-y-4`}>
             <input type="hidden" name="intent" value="login" />
+            {configProblem && !loginError && (
+              <p class="rounded-xl bg-berry-100 px-4 py-3 font-semibold text-berry-700" role="alert">{configProblem}</p>
+            )}
             {loginError && <p class="rounded-xl bg-berry-100 px-4 py-3 font-semibold text-berry-700" role="alert">{loginError}</p>}
             <div>
               <label for="gebruiker" class="font-bold text-ink-900">Gebruikersnaam</label>

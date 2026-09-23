@@ -42,8 +42,10 @@ export default defineConfig({
     schema: {
       // Vaste login voor de beheerpagina. In te stellen in Netlify onder
       // Site configuration > Environment variables, lokaal in `.env`.
-      BEHEER_GEBRUIKER: envField.string({ context: 'server', access: 'secret' }),
-      BEHEER_WACHTWOORD: envField.string({ context: 'server', access: 'secret', min: 10 }),
+      // Optioneel: een ontbrekende of te korte waarde mag /beheer niet laten
+      // crashen. src/lib/auth.ts controleert ze en de pagina meldt wat er mist.
+      BEHEER_GEBRUIKER: envField.string({ context: 'server', access: 'secret', optional: true }),
+      BEHEER_WACHTWOORD: envField.string({ context: 'server', access: 'secret', optional: true }),
     },
   },
 
