@@ -1,6 +1,6 @@
 ---
 import { Image } from 'astro:assets';
-import logo from '../assets/logo.svg';
+import logo from '../assets/logo-icoon.png';
 import { BUSINESS } from '../consts';
 
 // Op subpagina's verwijzen de ankers terug naar de homepage.
@@ -19,7 +19,7 @@ const NAV_LINKS = [
 <header class="sticky top-0 z-40 border-b border-sun-200 bg-sun-50/95 backdrop-blur">
   <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2.5 sm:px-6">
     <a href="/" class="flex items-center gap-2.5" aria-label="Verano Ice Bar, naar de homepage">
-      <Image src={logo} alt="" width={48} height={48} class="h-12 w-12" loading="eager" />
+      <Image src={logo} alt="" width={48} height={48} class="h-12 w-12 rounded-lg" loading="eager" />
       <span class="font-display text-xl font-semibold text-ink-900">Verano Ice Bar</span>
     </a>
 

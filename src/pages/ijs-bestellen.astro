@@ -24,6 +24,16 @@ const schema = [
     serviceType: 'IJs per liter op bestelling',
     provider: { '@id': `${SITE.url}/#zaak` },
     areaServed: { '@type': 'City', name: BUSINESS.addressLocality },
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'EUR',
+      priceSpecification: {
+        '@type': 'UnitPriceSpecification',
+        price: LITERS.pricePerLiter,
+        priceCurrency: 'EUR',
+        referenceQuantity: { '@type': 'QuantitativeValue', value: 1, unitCode: 'LTR' },
+      },
+    },
   },
 ];
 
@@ -34,7 +44,7 @@ const labelClass = 'block font-bold text-ink-900';
 
 <Layout
   title="Liters ijs bestellen in Alken | Verano Ice Bar"
-  description="Liters ijs bestellen in Alken voor een feest of voor thuis. Kies je smaken, vraag je bestelling aan bij Verano Ice Bar en haal ze vers af aan de toonbank."
+  description={`Liters ijs bestellen in Alken aan ${LITERS.pricePerLiter} euro per liter, voor een feest of voor thuis. Kies je smaken, bestel ${LITERS.leadDays} dagen op voorhand en haal je ijs vers af.`}
   schema={schema}
 >
   <Header />
@@ -48,7 +58,7 @@ const labelClass = 'block font-bold text-ink-900';
         <p class="mt-4 max-w-2xl text-lg text-ink-800">
           Liters ijs bestellen doe je bij Verano Ice Bar voor een verjaardag, een communiefeest, een barbecue of gewoon voor
           in je eigen diepvries. Je kiest zelf de smaken, wij draaien ze vers en je haalt ze af in onze ijssalon op de
-          {' '}{BUSINESS.streetAddress}.
+          {' '}{BUSINESS.streetAddress}. Een liter ijs kost {LITERS.pricePerLiter} euro.
         </p>
       </div>
     </section>
@@ -59,18 +69,24 @@ const labelClass = 'block font-bold text-ink-900';
           <h2 class="text-3xl font-semibold text-ink-900">Hoe bestel je liters ijs?</h2>
           <ol class="mt-5 space-y-4 text-ink-800">
             <li>
-              <strong class="text-ink-900">1. Vul het formulier in.</strong> Kies het formaat, het aantal en de smaken, en wanneer je
-              het ijs wil afhalen. Bestel minstens {LITERS.leadDays} dagen op voorhand, zo kunnen we je smaken vers draaien.
+              <strong class="text-ink-900">1. Vul het formulier in.</strong> Kies hoeveel liter je wil, welke smaken, en wanneer je
+              het ijs wil afhalen. We verkopen ijs per pot van 1 liter, aan {LITERS.pricePerLiter} euro per liter. Bestel minstens
+              {' '}{LITERS.leadDays} dagen op voorhand, zo kunnen we je smaken vers draaien.
             </li>
             <li>
-              <strong class="text-ink-900">2. Wij bevestigen.</strong> We bellen of mailen je terug met de prijs en het afhaalmoment.
-              Pas dan is je bestelling vast.
+              <strong class="text-ink-900">2. Wij bevestigen.</strong> We bellen of mailen je terug om je bestelling en het
+              afhaalmoment te bevestigen. Vanaf die bevestiging geldt je bestelling als aankoop.
             </li>
             <li>
               <strong class="text-ink-900">3. Afhalen in Alken.</strong> Je haalt je ijs af aan de toonbank op de
               {' '}{BUSINESS.streetAddress}. Neem een koeltas mee als je verder moet rijden.
             </li>
           </ol>
+          <h2 class="mt-10 text-2xl font-semibold text-ink-900">Kan je een bestelling annuleren?</h2>
+          <p class="mt-3 text-ink-800">
+            Tot wij je bestelling bevestigen, kan je ze kosteloos annuleren of aanpassen. Na onze bevestiging is je bestelling
+            een aankoop: we draaien je ijs dan speciaal voor jou, dus annuleren kan niet meer en je betaalt het volledige bedrag.
+          </p>
           <p class="mt-6 text-ink-700">
             Liever even bellen? Dat kan op <a href={BUSINESS.phoneHref} class="font-bold text-berry-700 underline">{BUSINESS.phone}</a>.
             Benieuwd wat er nu in de toonbank ligt? Bekijk de <a href="/#smaken" class="font-bold text-berry-700 underline">smaken van vandaag</a>.
@@ -106,14 +122,14 @@ const labelClass = 'block font-bold text-ink-900';
               <input id="email" name="email" type="email" autocomplete="email" class={fieldClass} />
             </div>
             <div>
-              <label for="formaat" class={labelClass}>Formaat</label>
-              <select id="formaat" name="formaat" required class={fieldClass}>
-                {LITERS.sizes.map((size) => <option>{size}</option>)}
-              </select>
+              <label for="aantal" class={labelClass}>Aantal liter <span class="font-normal text-ink-700">(potten van 1 liter)</span></label>
+              <input id="aantal" name="aantal" type="number" min="1" max="50" value="1" required class={fieldClass} data-price={LITERS.pricePerLiter} />
             </div>
-            <div>
-              <label for="aantal" class={labelClass}>Aantal potten</label>
-              <input id="aantal" name="aantal" type="number" min="1" max="50" value="1" required class={fieldClass} />
+            <div class="flex items-end">
+              <p class="pb-3 text-ink-800">
+                Totaal: <strong id="totaal" class="text-ink-900">{LITERS.pricePerLiter} euro</strong>
+                {' '}<span class="text-ink-700">({LITERS.pricePerLiter} euro per liter)</span>
+              </p>
             </div>
             <div class="sm:col-span-2">
               <label for="smaken" class={labelClass}>Welke smaken?</label>
@@ -139,6 +155,12 @@ const labelClass = 'block font-bold text-ink-900';
             </div>
             <div class="sm:col-span-2">
               <label class="flex items-start gap-3 text-ink-800">
+                <input type="checkbox" name="voorwaarden" value="akkoord" required class="mt-1 h-5 w-5 accent-ink-900" />
+                <span>Ik weet dat mijn bestelling na de bevestiging van Verano Ice Bar een aankoop is en niet meer geannuleerd kan worden.</span>
+              </label>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="flex items-start gap-3 text-ink-800">
                 <input type="checkbox" name="privacy" value="akkoord" required class="mt-1 h-5 w-5 accent-ink-900" />
                 <span>
                   Verano Ice Bar mag mijn gegevens gebruiken om deze bestelling af te handelen, zoals beschreven in het
@@ -151,7 +173,7 @@ const labelClass = 'block font-bold text-ink-900';
           <button type="submit" class="mt-6 w-full rounded-full bg-ink-900 px-6 py-3.5 text-lg font-bold text-sun-100 hover:bg-ink-700">
             Verstuur mijn aanvraag
           </button>
-          <p class="mt-3 text-center text-sm text-ink-700">Je aanvraag is pas definitief na onze bevestiging.</p>
+          <p class="mt-3 text-center text-sm text-ink-700">Je bestelling is pas definitief na onze bevestiging.</p>
         </form>
       </div>
     </section>
@@ -168,5 +190,16 @@ const labelClass = 'block font-bold text-ink-900';
     const d = new Date();
     d.setDate(d.getDate() + lead);
     input.min = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  // Totaalprijs mee laten lopen met het aantal liter.
+  const amount = document.getElementById('aantal') as HTMLInputElement | null;
+  const total = document.getElementById('totaal');
+  if (amount && total) {
+    const price = Number(amount.dataset.price ?? 0);
+    amount.addEventListener('input', () => {
+      const n = Math.max(1, Math.floor(Number(amount.value) || 1));
+      total.textContent = `${n * price} euro`;
+    });
   }
 </script>

@@ -46,14 +46,17 @@ e-mailmelding naar het adres van de zaak.
 
 ## Nog aan te leveren door de klant
 
-- **Logo**: `src/assets/logo.svg` is een voorlopige natekening. Vervang door het
-  originele bestand en draai `node scripts/og-image.mjs` voor de deelafbeelding.
-  Kopieer het logo ook naar `public/favicon.svg`.
+- **Logo als vectorbestand** (SVG, AI of PDF), als de klant het heeft. Nu
+  komt alles uit een PNG van 1024 px: `src/assets/logo.png` (site),
+  `public/logo.png` (structured data), `public/favicon.png` en
+  `public/apple-touch-icon.png` en `src/assets/logo-icoon.png` (enkel het hoorntje, voor de header). Na een nieuw logo:
+  `node scripts/og-image.mjs` voor de deelafbeelding.
 - **Sfeerfoto's**: zet ze in `src/assets/sfeer/`. De sectie verschijnt vanzelf
   zodra er foto's staan. De bestandsnaam wordt de alt-tekst en bepaalt de
   volgorde, bv. `01-terras-in-de-zon.jpg`.
-- **Domein**: `veranoicebar.be` is een aanname in `astro.config.mjs`,
-  `src/consts.ts`, `public/robots.txt` en `netlify.toml`.
+- **Seizoen 2027**: de zaak start in februari. De exacte openingsdag en het
+  einde van het seizoen instellen in `/beheer` (startwaarde: 1 februari tot
+  30 september 2027).
 - **Smakenlijst**: de startlijst is een voorbeeld. De uitbaters vullen hun eigen
   smaken aan in `/beheer`.
 

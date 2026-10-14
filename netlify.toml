@@ -3,10 +3,9 @@
   publish = "dist"
 
 # Canoniek domein zonder www (duplicate content vermijden).
-# TODO: aanpassen zodra het definitieve domein vastligt.
 [[redirects]]
-  from = "https://www.veranoicebar.be/*"
-  to = "https://veranoicebar.be/:splat"
+  from = "https://www.verano-icebar-alken.be/*"
+  to = "https://verano-icebar-alken.be/:splat"
   status = 301
   force = true
 

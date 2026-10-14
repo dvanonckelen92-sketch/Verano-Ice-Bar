@@ -1,5 +1,5 @@
 ---
-import { VOORZIENINGEN } from '../consts';
+import { VOORZIENINGEN, IN_DE_BUURT } from '../consts';
 ---
 
 <section id="voorzieningen" class="bg-lilac-100 py-16">
@@ -8,6 +8,18 @@ import { VOORZIENINGEN } from '../consts';
     <dl class="mt-8 grid gap-x-10 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
       {
         VOORZIENINGEN.map((v) => (
+          <div class="border-t-2 border-lilac-500/40 pt-4">
+            <dt class="font-display text-xl font-semibold text-ink-900">{v.label}</dt>
+            <dd class="mt-1 text-ink-700">{v.detail}</dd>
+          </div>
+        ))
+      }
+    </dl>
+
+    <h3 class="mt-14 text-2xl font-semibold text-ink-900 sm:text-3xl">Wat is er te doen in de buurt?</h3>
+    <dl class="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
+      {
+        IN_DE_BUURT.map((v) => (
           <div class="border-t-2 border-lilac-500/40 pt-4">
             <dt class="font-display text-xl font-semibold text-ink-900">{v.label}</dt>
             <dd class="mt-1 text-ink-700">{v.detail}</dd>

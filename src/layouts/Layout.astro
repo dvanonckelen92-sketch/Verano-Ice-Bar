@@ -31,7 +31,7 @@ const business: Record<string, unknown> = {
   email: BUSINESS.email,
   vatID: BUSINESS.vatNumber,
   image: ogImage.toString(),
-  logo: new URL('/favicon.svg', Astro.site).toString(),
+  logo: new URL('/logo.png', Astro.site).toString(),
   priceRange: '€',
   currenciesAccepted: 'EUR',
   servesCuisine: 'IJs',
@@ -109,7 +109,8 @@ const jsonLd = {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#f6dd66" />
     <meta name="generator" content={Astro.generator} />
     <Font cssVariable="--font-fredoka" preload />

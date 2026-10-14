@@ -26,14 +26,16 @@ const KEYS = { hours: 'openingsuren', flavours: 'smaken' } as const;
 const store = () => getStore({ name: STORE_NAME, consistency: 'strong' });
 
 // Startwaarden tot de uitbaters iets opslaan. Uren volgens alken.be en Facebook
-// (2026-09-23): 13u tot 21u, dinsdag rustdag, seizoen maart tot september.
+// (2026-09-23): 13u tot 21u, dinsdag rustdag. De klant start in februari 2027
+// (doorgegeven 2026-10-14); de exacte dag en het einde van het seizoen zijn nog
+// niet bevestigd en worden in /beheer ingesteld.
 export const DEFAULT_HOURS: HoursData = {
   week: Object.fromEntries(
     DAYS.map((d) => [d.key, { closed: d.key === 'di', opens: '13:00', closes: '21:00' }]),
   ) as HoursData['week'],
   exceptions: [],
-  seasonStart: '2026-03-01',
-  seasonEnd: '2026-09-30',
+  seasonStart: '2027-02-01',
+  seasonEnd: '2027-09-30',
   notice: '',
   updatedAt: null,
 };

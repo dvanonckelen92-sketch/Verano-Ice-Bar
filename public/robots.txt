@@ -61,4 +61,4 @@ Allow: /
 User-agent: YouBot
 Allow: /
 
-Sitemap: https://veranoicebar.be/sitemap-index.xml
+Sitemap: https://verano-icebar-alken.be/sitemap-index.xml

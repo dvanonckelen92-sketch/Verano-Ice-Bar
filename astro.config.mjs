@@ -5,8 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 import sitemap from '@astrojs/sitemap';
 import netlify from '@astrojs/netlify';
 
-// TODO: definitief domein bevestigen met de klant voor livegang.
-const SITE_URL = 'https://veranoicebar.be';
+const SITE_URL = 'https://verano-icebar-alken.be';
 
 // https://astro.build/config
 export default defineConfig({

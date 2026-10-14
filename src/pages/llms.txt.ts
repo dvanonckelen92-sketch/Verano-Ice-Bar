@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { SITE, BUSINESS, LINKS, VOORZIENINGEN, LITERS } from '../consts';
+import { SITE, BUSINESS, LINKS, VOORZIENINGEN, IN_DE_BUURT, LITERS } from '../consts';
 import { DAYS, brusselsNow, formatDate, formatRange, upcomingExceptions } from '../lib/hours';
 import { getFlavours, getHours } from '../lib/store';
 import { setLiveCacheHeaders } from '../lib/cache';
@@ -40,8 +40,11 @@ ${flavours.note ? `\n${flavours.note}\n` : ''}
 ## Voorzieningen
 ${VOORZIENINGEN.map((v) => `- ${v.label}`).join('\n')}
 
+## In de buurt
+${IN_DE_BUURT.map((v) => `- ${v.label}`).join('\n')}
+
 ## Liters ijs bestellen
-Formaten: ${LITERS.sizes.join(', ')}. Minstens ${LITERS.leadDays} dagen op voorhand aanvragen; de zaak bevestigt elke bestelling zelf.
+Potten van 1 liter aan ${LITERS.pricePerLiter} euro per liter. Minstens ${LITERS.leadDays} dagen op voorhand bestellen. De zaak bevestigt elke bestelling; na die bevestiging is de bestelling een aankoop en kan ze niet meer geannuleerd worden.
 
 ## Links
 - [Homepage](${SITE.url}/): smaken van vandaag, openingsuren en contact

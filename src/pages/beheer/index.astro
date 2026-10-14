@@ -5,7 +5,8 @@
 // Gemaakt voor de gsm achter de toonbank: elk blok heeft een eigen opslagknop.
 import '../../styles/global.css';
 import { Font, Image } from 'astro:assets';
-import logo from '../../assets/logo.svg';
+import logo from '../../assets/logo.png';
+import logoIcoon from '../../assets/logo-icoon.png';
 import { DAYS, formatDate } from '../../lib/hours';
 import { getFlavours, getHours, saveFlavours, saveHours, isLockedOut, registerFailedLogin, clearFailedLogins } from '../../lib/store';
 import {
@@ -167,7 +168,8 @@ const saveBar =
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="robots" content="noindex, nofollow" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#fffbea" />
     <title>Beheer | Verano Ice Bar</title>
     <Font cssVariable="--font-fredoka" />
@@ -177,7 +179,7 @@ const saveBar =
     {
       !loggedIn ? (
         <main class="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4 py-10">
-          <Image src={logo} alt="Verano Ice Bar" width={112} height={112} class="mx-auto h-28 w-28" />
+          <Image src={logo} alt="Verano Ice Bar" width={112} height={112} class="mx-auto h-28 w-28 rounded-2xl" />
           <h1 class="mt-4 text-center text-3xl font-semibold text-ink-900">Beheer</h1>
           <form method="POST" class="mt-6 space-y-4 rounded-3xl bg-white p-5 shadow-sm">
             <input type="hidden" name="intent" value="login" />
@@ -202,7 +204,7 @@ const saveBar =
           <header class="sticky top-0 z-30 border-b border-sun-200 bg-sun-50/95 backdrop-blur">
             <div class="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 pt-2">
               <div class="flex items-center gap-2">
-                <Image src={logo} alt="" width={36} height={36} class="h-9 w-9" />
+                <Image src={logoIcoon} alt="" width={36} height={36} class="h-9 w-9 rounded-md" />
                 <span class="font-display text-lg font-semibold text-ink-900">Beheer</span>
               </div>
               <a href="/" target="_blank" class="rounded-full px-3 py-2 text-sm font-bold text-berry-700 underline">
