@@ -16,7 +16,9 @@ interface Props {
 
 const { title, description, hours, schema = [], noindex = false } = Astro.props;
 
-const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+// Met build.format 'file' eindigt het pad bij het bouwen op .html; de publieke
+// URL (en de sitemap) heeft die extensie niet.
+const canonicalURL = new URL(Astro.url.pathname.replace(/\.html$/, ''), Astro.site);
 const ogImage = new URL('/og-image.png', Astro.site);
 const inLanguage = SITE.locale.replace('_', '-');
 const organizationId = `${SITE.url}/#zaak`;

@@ -11,6 +11,10 @@ const SITE_URL = 'https://verano-icebar-alken.be';
 export default defineConfig({
   site: SITE_URL,
   trailingSlash: 'never',
+  // Pagina's als ijs-bestellen.html, niet ijs-bestellen/index.html. Anders stuurt
+  // Netlify /ijs-bestellen met een 301 door naar /ijs-bestellen/ en verwijzen
+  // canonical en sitemap naar een redirect.
+  build: { format: 'file' },
 
   // Standaard statisch. Enkel de homepage (live smaken en uren), /llms.txt en
   // /beheer draaien on demand; zie `export const prerender = false` daar.
@@ -77,7 +81,7 @@ export default defineConfig({
     sitemap({
       // De homepage wordt on demand gerenderd en dus niet automatisch opgepikt.
       customPages: [`${SITE_URL}/`],
-      filter: (page) => !page.includes('/beheer') && !page.includes('/bedankt'),
+      filter: (page) => !page.includes('/beheer') && !page.includes('/bestelling-ontvangen'),
     }),
   ],
 });
