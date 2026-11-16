@@ -26,16 +26,15 @@ const KEYS = { hours: 'openingsuren', flavours: 'smaken' } as const;
 const store = () => getStore({ name: STORE_NAME, consistency: 'strong' });
 
 // Startwaarden tot de uitbaters iets opslaan. Uren volgens alken.be en Facebook
-// (2026-09-23): 13u tot 21u, dinsdag rustdag. De klant start in februari 2027
-// (doorgegeven 2026-10-14); de exacte dag en het einde van het seizoen zijn nog
-// niet bevestigd en worden in /beheer ingesteld.
+// (2026-09-23): 13u tot 21u, dinsdag rustdag. De klant start terug in februari
+// 2027 (doorgegeven 2026-10-14); de exacte dag stellen ze in /beheer in.
 export const DEFAULT_HOURS: HoursData = {
   week: Object.fromEntries(
     DAYS.map((d) => [d.key, { closed: d.key === 'di', opens: '13:00', closes: '21:00' }]),
   ) as HoursData['week'],
   exceptions: [],
-  seasonStart: '2027-02-01',
-  seasonEnd: '2027-09-30',
+  winterStart: '2026-11-01',
+  reopenDate: '2027-02-01',
   notice: '',
   updatedAt: null,
 };
@@ -89,7 +88,15 @@ async function read<T>(key: string, fallback: T): Promise<T> {
   }
 }
 
-export const getHours = () => read(KEYS.hours, DEFAULT_HOURS);
+export async function getHours(): Promise<HoursData> {
+  // Oudere versies bewaarden een seizoen (seasonStart/seasonEnd). Dat model is
+  // vervangen door de winterstop; de oude velden laten we hier vallen.
+  const { seasonStart: _start, seasonEnd: _end, ...hours } = (await read(KEYS.hours, DEFAULT_HOURS)) as HoursData & {
+    seasonStart?: string;
+    seasonEnd?: string;
+  };
+  return hours;
+}
 export const getFlavours = () => read(KEYS.flavours, DEFAULT_FLAVOURS);
 
 export async function saveHours(data: HoursData): Promise<void> {

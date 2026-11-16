@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { SITE, BUSINESS, LINKS, VOORZIENINGEN, IN_DE_BUURT, LITERS } from '../consts';
-import { DAYS, brusselsNow, formatDate, formatRange, upcomingExceptions } from '../lib/hours';
+import { DAYS, addDays, brusselsNow, currentOrUpcomingWinterBreak, formatDate, formatRange, upcomingExceptions } from '../lib/hours';
 import { getFlavours, getHours } from '../lib/store';
 import { setLiveCacheHeaders } from '../lib/cache';
 
@@ -21,9 +21,17 @@ export const GET: APIRoute = async () => {
     .join('\n');
   const available = flavours.flavours.filter((f) => f.available);
 
+  const winter = currentOrUpcomingWinterBreak(hours, today);
+  const winterUntil = winter?.reopen ? ` tot en met ${formatDate(addDays(winter.reopen, -1))}` : '';
+  const winterLine = !winter
+    ? ''
+    : winter.active
+      ? `Momenteel gesloten wegens winterstop${winterUntil}.${winter.reopen ? ` Terug open op ${formatDate(winter.reopen)}.` : ' De datum van heropening is nog niet bekend.'}`
+      : `Winterstop gepland: gesloten vanaf ${formatDate(winter.start)}${winterUntil}.`;
+
   const body = `# ${SITE.name}
 
-> ${SITE.name} is een ijssalon in ${BUSINESS.addressLocality} (België) met dagvers, huisbereid roomijs en sorbet. Open van ${formatDate(hours.seasonStart)} tot ${formatDate(hours.seasonEnd)}.
+> ${SITE.name} is een ijssalon in ${BUSINESS.addressLocality} (België) met dagvers, huisbereid roomijs en sorbet.${winterLine ? ` ${winterLine}` : ''}
 
 ## Gegevens
 - Adres: ${BUSINESS.streetAddress}, ${BUSINESS.postalCode} ${BUSINESS.addressLocality}, België
@@ -31,7 +39,7 @@ export const GET: APIRoute = async () => {
 - E-mail: ${BUSINESS.email}
 - Btw: ${BUSINESS.vatNumber}
 
-## Openingsuren tijdens het seizoen
+## Openingsuren${winter?.active ? (winter.reopen ? ` vanaf ${formatDate(winter.reopen)}` : ' na de winterstop') : ''}
 ${week}
 ${exceptions ? `\n## Afwijkende openingsuren\n${exceptions}\n` : ''}
 ## Smaken vandaag (${formatDate(today)})

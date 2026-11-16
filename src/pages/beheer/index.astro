@@ -7,7 +7,7 @@ import '../../styles/global.css';
 import { Font, Image } from 'astro:assets';
 import logo from '../../assets/logo.png';
 import logoIcoon from '../../assets/logo-icoon.png';
-import { DAYS, formatDate } from '../../lib/hours';
+import { DAYS, addDays, brusselsNow, currentOrUpcomingWinterBreak, formatDate } from '../../lib/hours';
 import { getFlavours, getHours, saveFlavours, saveHours, isLockedOut, registerFailedLogin, clearFailedLogins } from '../../lib/store';
 import {
   FormError,
@@ -15,7 +15,7 @@ import {
   parseException,
   parseNewFlavour,
   parseNotice,
-  parseSeason,
+  parseWinterBreak,
   parseWeek,
   pruneExceptions,
   removeException,
@@ -33,7 +33,7 @@ Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
 
 // Elk blok op de pagina heeft een eigen formulier. Het id is ook het anker
 // waar je na het opslaan terechtkomt, en de plek waar de melding verschijnt.
-type Block = 'smaken' | 'smaak-nieuw' | 'weekschema' | 'uitzonderingen' | 'seizoen' | 'mededeling';
+type Block = 'smaken' | 'smaak-nieuw' | 'weekschema' | 'uitzonderingen' | 'winterstop' | 'mededeling';
 
 const RESULTS: Record<string, { block: Block; text: string }> = {
   smaken: { block: 'smaken', text: 'Opgeslagen. De website toont nu deze smaken.' },
@@ -42,7 +42,7 @@ const RESULTS: Record<string, { block: Block; text: string }> = {
   weekschema: { block: 'weekschema', text: 'Openingsuren opgeslagen.' },
   uitzondering: { block: 'uitzonderingen', text: 'Uitzondering opgeslagen.' },
   'uitzondering-verwijderd': { block: 'uitzonderingen', text: 'Uitzondering verwijderd.' },
-  seizoen: { block: 'seizoen', text: 'Seizoen opgeslagen.' },
+  winterstop: { block: 'winterstop', text: 'Winterstop opgeslagen.' },
   mededeling: { block: 'mededeling', text: 'Mededeling opgeslagen.' },
 };
 
@@ -112,10 +112,10 @@ if (Astro.request.method === 'POST') {
           await saveHours(removeException(arg, await getHours()));
           result = 'uitzondering-verwijderd';
           break;
-        case 'seizoen':
-          block = 'seizoen';
-          await saveHours(parseSeason(form, await getHours()));
-          result = 'seizoen';
+        case 'winterstop':
+          block = 'winterstop';
+          await saveHours(parseWinterBreak(form, await getHours()));
+          result = 'winterstop';
           break;
         case 'mededeling':
           block = 'mededeling';
@@ -138,6 +138,14 @@ if (Astro.request.method === 'POST') {
 const done = RESULTS[Astro.url.searchParams.get('ok') ?? ''] ?? null;
 const [hours, flavourData] = loggedIn ? await Promise.all([getHours(), getFlavours()]) : [null, null];
 const exceptions = hours ? pruneExceptions(hours.exceptions) : [];
+const winterBreak = hours ? currentOrUpcomingWinterBreak(hours, brusselsNow().date) : null;
+const winterSummary = !winterBreak
+  ? 'Er is geen winterstop gepland. De site toont de gewone openingsuren.'
+  : `${winterBreak.active ? 'Nu in winterstop' : 'Winterstop gepland'}: gesloten vanaf ${formatDate(winterBreak.start)}${
+      winterBreak.reopen
+        ? ` tot en met ${formatDate(addDays(winterBreak.reopen, -1))}, terug open op ${formatDate(winterBreak.reopen)}.`
+        : ', nog geen datum om terug te openen.'
+    }`;
 const groups = flavourData
   ? [
       { title: 'Roomijs', items: sortFlavours(flavourData.flavours.filter((f) => f.kind === 'roomijs')) },
@@ -402,22 +410,28 @@ const saveBar =
               </form>
             </section>
 
-            {/* ---------------- Seizoen ---------------- */}
-            <form method="POST" id="seizoen" class={card}>
-              <h2 class={h2}>Seizoen</h2>
-              <p class={help}>Buiten deze periode toont de site "winterstop" en wanneer jullie terug opengaan.</p>
+            {/* ---------------- Winterstop ---------------- */}
+            <form method="POST" id="winterstop" class={card}>
+              <h2 class={h2}>Winterstop</h2>
+              <p class={help}>
+                Vanaf de eerste gesloten dag toont de site "winterstop" in plaats van de openingsuren, en wanneer jullie terug
+                opengaan. Maak beide velden leeg als er geen winterstop is.
+              </p>
+              <p class="mt-3 rounded-2xl bg-sun-50 p-3 text-[15px] font-semibold first-letter:uppercase">{winterSummary}</p>
               <div class="mt-3 grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label for="seizoen-start" class="font-bold text-ink-900">Eerste dag</label>
-                  <input id="seizoen-start" type="date" name="seizoen-start" value={hours!.seasonStart} required class={`${input} mt-1`} />
+                  <label for="winterstop-start" class="font-bold text-ink-900">Gesloten vanaf</label>
+                  <span class="block text-sm text-ink-700">De eerste dag dat jullie dicht zijn</span>
+                  <input id="winterstop-start" type="date" name="winterstop-start" value={hours!.winterStart} class={`${input} mt-1`} />
                 </div>
                 <div>
-                  <label for="seizoen-einde" class="font-bold text-ink-900">Laatste dag</label>
-                  <input id="seizoen-einde" type="date" name="seizoen-einde" value={hours!.seasonEnd} required class={`${input} mt-1`} />
+                  <label for="winterstop-einde" class="font-bold text-ink-900">Terug open op</label>
+                  <span class="block text-sm text-ink-700">Leeg laten als dat nog niet vastligt</span>
+                  <input id="winterstop-einde" type="date" name="winterstop-einde" value={hours!.reopenDate} class={`${input} mt-1`} />
                 </div>
               </div>
-              <Feedback result={feedback('seizoen')} class="mt-3" />
-              <button type="submit" name="intent" value="seizoen" class={`${primary} mt-4`}>Seizoen opslaan</button>
+              <Feedback result={feedback('winterstop')} class="mt-3" />
+              <button type="submit" name="intent" value="winterstop" class={`${primary} mt-4`}>Winterstop opslaan</button>
             </form>
 
             {/* ---------------- Mededeling ---------------- */}

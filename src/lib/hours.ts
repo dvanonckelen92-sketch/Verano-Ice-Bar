@@ -30,9 +30,13 @@ export type HoursException = {
 export type HoursData = {
   week: Record<DayKey, DayHours>;
   exceptions: HoursException[];
-  /** Seizoen als YYYY-MM-DD. Buiten deze periode is de zaak dicht. */
-  seasonStart: string;
-  seasonEnd: string;
+  /**
+   * Winterstop als YYYY-MM-DD. Vanaf `winterStart` is de zaak dicht, op
+   * `reopenDate` gaat ze terug open. Leeg begin = geen winterstop, leeg einde =
+   * dicht tot nader bericht.
+   */
+  winterStart: string;
+  reopenDate: string;
   /** Vrije mededeling bovenaan de site, leeg = niet tonen. */
   notice: string;
   updatedAt: string | null;
@@ -44,7 +48,7 @@ export type DayResolution = {
   opens: string | null;
   closes: string | null;
   /** Waarom de dag afwijkt van het gewone weekschema, indien van toepassing. */
-  reason: 'season' | 'exception' | null;
+  reason: 'winter' | 'exception' | null;
   note: string;
 };
 
@@ -85,6 +89,25 @@ export function weekdayIndex(date: string): number {
   return (new Date(`${date}T12:00:00Z`).getUTCDay() + 6) % 7;
 }
 
+/** Valt deze datum in de winterstop? */
+export function inWinterBreak(data: HoursData, date: string): boolean {
+  if (!data.winterStart || date < data.winterStart) return false;
+  return !data.reopenDate || date < data.reopenDate;
+}
+
+/**
+ * De winterstop die nu loopt of nog moet komen, of null als er geen gepland is
+ * of ze al voorbij is.
+ */
+export function currentOrUpcomingWinterBreak(
+  data: HoursData,
+  today: string,
+): { start: string; reopen: string | null; active: boolean } | null {
+  if (!data.winterStart) return null;
+  if (data.reopenDate && data.reopenDate <= today) return null;
+  return { start: data.winterStart, reopen: data.reopenDate || null, active: data.winterStart <= today };
+}
+
 export function resolveDay(data: HoursData, date: string): DayResolution {
   const exception = data.exceptions.find((e) => e.date === date);
   if (exception) {
@@ -97,8 +120,8 @@ export function resolveDay(data: HoursData, date: string): DayResolution {
       note: exception.note,
     };
   }
-  if (date < data.seasonStart || date > data.seasonEnd) {
-    return { date, open: false, opens: null, closes: null, reason: 'season', note: '' };
+  if (inWinterBreak(data, date)) {
+    return { date, open: false, opens: null, closes: null, reason: 'winter', note: '' };
   }
   const day = data.week[DAYS[weekdayIndex(date)].key];
   return {
@@ -155,11 +178,13 @@ export function openStatus(data: HoursData, now = new Date()): OpenStatus {
   }
 
   const next = nextOpenDay(data, addDays(date, 1));
-  if (!next || !next.opens) return { open: false, label: 'Momenteel gesloten' };
+  if (!next || !next.opens) {
+    return { open: false, label: today.reason === 'winter' ? 'Winterstop, momenteel gesloten' : 'Momenteel gesloten' };
+  }
   if (next.date === addDays(date, 1)) {
     return { open: false, label: `Nu gesloten, morgen open vanaf ${next.opens}` };
   }
-  if (today.reason === 'season') {
+  if (today.reason === 'winter') {
     return { open: false, label: `Winterstop, terug open op ${formatDate(next.date)}` };
   }
   return { open: false, label: `Nu gesloten, weer open op ${formatDate(next.date)}` };

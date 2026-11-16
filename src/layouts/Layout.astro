@@ -2,7 +2,7 @@
 import '../styles/global.css';
 import { Font } from 'astro:assets';
 import { SITE, BUSINESS, LINKS, VOORZIENINGEN } from '../consts';
-import { DAYS, type HoursData } from '../lib/hours';
+import { DAYS, addDays, type HoursData } from '../lib/hours';
 
 interface Props {
   title: string;
@@ -65,9 +65,19 @@ if (hours) {
       dayOfWeek: `https://schema.org/${d.schema}`,
       opens: hours.week[d.key].opens,
       closes: hours.week[d.key].closes,
-      validFrom: hours.seasonStart,
-      validThrough: hours.seasonEnd,
     })),
+    // Winterstop als één gesloten periode, zoals Google het voor sluitingen vraagt.
+    ...(hours.winterStart
+      ? [
+          {
+            '@type': 'OpeningHoursSpecification',
+            opens: '00:00',
+            closes: '00:00',
+            validFrom: hours.winterStart,
+            ...(hours.reopenDate ? { validThrough: addDays(hours.reopenDate, -1) } : {}),
+          },
+        ]
+      : []),
     // Uitzonderingen: zelfde datum als begin en einde. Gesloten = 00:00 tot 00:00.
     ...hours.exceptions.map((e) => ({
       '@type': 'OpeningHoursSpecification',

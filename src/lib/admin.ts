@@ -49,11 +49,16 @@ export function parseWeek(form: FormData, current: HoursData): HoursData {
   return { ...current, week };
 }
 
-export function parseSeason(form: FormData, current: HoursData): HoursData {
-  const seasonStart = date(form, 'seizoen-start', 'Eerste dag');
-  const seasonEnd = date(form, 'seizoen-einde', 'Laatste dag');
-  if (seasonStart > seasonEnd) throw new FormError('Het seizoen moet eindigen na de startdatum.');
-  return { ...current, seasonStart, seasonEnd };
+/** Winterstop. Beide velden leeg = geen winterstop. */
+export function parseWinterBreak(form: FormData, current: HoursData): HoursData {
+  const optionalDate = (key: string, label: string) => (text(form, key, 10) ? date(form, key, label) : '');
+  const winterStart = optionalDate('winterstop-start', 'Gesloten vanaf');
+  const reopenDate = optionalDate('winterstop-einde', 'Terug open op');
+  if (reopenDate && !winterStart) throw new FormError('Vul ook in vanaf wanneer jullie gesloten zijn.');
+  if (reopenDate && reopenDate <= winterStart) {
+    throw new FormError('De dag waarop jullie terug opengaan moet na de eerste gesloten dag liggen.');
+  }
+  return { ...current, winterStart, reopenDate };
 }
 
 export function parseNotice(form: FormData, current: HoursData): HoursData {
